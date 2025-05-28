@@ -19,6 +19,7 @@ public class DB_Manager : MonoBehaviour
     public float itemWidth = 160f;
 
     private SQLiteConnection _connection;
+    public int selectedProjectId = -1;
 
     void Start()
     {
@@ -30,7 +31,7 @@ public class DB_Manager : MonoBehaviour
     {
         string dbName = "NETAS-DATAS.db";
         string dbPath = Path.Combine(Application.streamingAssetsPath, dbName);
-        _connection = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadOnly);
+        _connection = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create);
         Debug.Log("✅ Veritabanına bağlandı: " + dbPath);
     }
 
@@ -68,6 +69,43 @@ public class DB_Manager : MonoBehaviour
         float totalWidth = projects.Count * (itemWidth + itemSpacing);
         contentParent.sizeDelta = new Vector2(totalWidth, contentParent.sizeDelta.y);
     }
+    public void LoadTaskUI()
+    {
+        if (selectedProjectId == -1)
+        {
+            Debug.LogWarning("⚠️ Görevler yüklenemedi: Seçili proje yok.");
+            return;
+        }
+
+        ClearTasks(); // Önce eski görevleri temizle
+
+        var tasks = _connection.Table<Project_Tasks>()
+                               .Where(t => t.projectId == selectedProjectId)
+                               .ToList();
+
+        foreach (var task in tasks)
+        {
+            GameObject taskItem = Instantiate(taskItemPrefab);
+            taskItem.GetComponentInChildren<TextMeshProUGUI>().text = task.title;
+
+            switch (task.status)
+            {
+                case "ToDo":
+                    taskItem.transform.SetParent(todoParent, false);
+                    break;
+                case "InProgress":
+                    taskItem.transform.SetParent(inProgressParent, false);
+                    break;
+                case "Done":
+                    taskItem.transform.SetParent(doneParent, false);
+                    break;
+                default:
+                    Debug.LogWarning("❗ Bilinmeyen görev durumu: " + task.status);
+                    break;
+            }
+        }
+    }
+
     public void ClearUI()
     {
         foreach (Transform child in contentParent)
@@ -75,11 +113,10 @@ public class DB_Manager : MonoBehaviour
             Destroy(child.gameObject);
         }
     }
-
     void OnProjectCardClicked(int projectId)
     {
         Debug.Log("🟢 Tıklanan proje ID: " + projectId);
-
+        selectedProjectId = projectId;
         // Önceki görevleri temizle
         ClearTasks();
 
@@ -110,8 +147,7 @@ public class DB_Manager : MonoBehaviour
             }
         }
     }
-
-    void ClearTasks()
+    public void ClearTasks()
     {
         foreach (Transform child in todoParent)
         {

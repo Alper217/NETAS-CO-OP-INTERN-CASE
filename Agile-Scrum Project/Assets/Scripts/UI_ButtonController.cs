@@ -5,16 +5,46 @@ using UnityEngine.UI;
 
 public class UI_ButtonController : MonoBehaviour
 {
+    [Header("Pages")]
+    [SerializeField] GameObject newProjectPage;
+    [SerializeField] GameObject taskPage;
+    [Header("Add Part")]
     [SerializeField] Button newProjectAddButton;
+    [SerializeField] Button taskAddButton;
+    [Header("Update Part")]
+    [SerializeField] Button projectUpdateButton;
+    [SerializeField] Button taskUpdateButton;
+    [Header("Other Parts")]
     [SerializeField] Button closePageButton;
-    [SerializeField] GameObject newProjectAddPage;
 
     public void ClosePage()
     {
-        newProjectAddPage.SetActive(false);
+        newProjectPage.SetActive(false);
+        taskPage.SetActive(false);
     }
-    public void OpenPage()
+    public void OpenaAddPage()
     {
-        newProjectAddPage.SetActive(true);
+        newProjectPage.SetActive(true);
+        newProjectAddButton.gameObject.SetActive(true);
+        projectUpdateButton.gameObject.SetActive(false);
     }
+    public void OpenUpdatePage()
+    {
+        newProjectPage.SetActive(true);
+        newProjectAddButton.gameObject.SetActive(false);
+        projectUpdateButton.gameObject.SetActive(true);
+    }
+    public void OpenTaskAddPage()
+    {
+        taskPage.SetActive(true);
+        taskAddButton.gameObject.SetActive(true);
+        taskUpdateButton.gameObject.SetActive(false);
+    }
+    public void OpenTaskUpdatePage()
+    {
+        taskPage.SetActive(true);
+        taskAddButton.gameObject.SetActive(false);
+        taskUpdateButton.gameObject.SetActive(true);
+    }
+
 }
