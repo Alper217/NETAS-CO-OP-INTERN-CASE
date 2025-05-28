@@ -1,16 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 using SQLite4Unity3d;
 using TMPro;
 using System.Linq;
 
 public class DB_Manager : MonoBehaviour
 {
-    public GameObject itemPrefab;         // Her proje için kullanılacak prefab
-    public RectTransform contentParent;   // Prefab'ların içinde bulunduğu yatay alan
-    public float itemSpacing = 5f;        // Kartlar arası boşluk
-    public float itemWidth = 160f;        // Kart genişliği
+    public GameObject itemPrefab;            // Proje kart prefabı
+    public RectTransform contentParent;      // Scroll alanı (projeler için)
+    public GameObject taskItemPrefab;        // Görev (task) kartı prefabı (sadece ad yazar)
+    public Transform todoParent;             // "ToDo" görevleri için parent
+    public Transform inProgressParent;       // "InProgress" görevleri için parent
+    public Transform doneParent;             // "Done" görevleri için parent
+
+    public float itemSpacing = 5f;
+    public float itemWidth = 160f;
 
     private SQLiteConnection _connection;
 
@@ -28,7 +34,7 @@ public class DB_Manager : MonoBehaviour
         Debug.Log("✅ Veritabanına bağlandı: " + dbPath);
     }
 
-    void LoadDataToUI()
+    public void LoadDataToUI()
     {
         var projects = _connection.Table<Project_Info_Data>().ToList();
         Debug.Log("Toplam proje sayısı: " + projects.Count);
@@ -42,20 +48,84 @@ public class DB_Manager : MonoBehaviour
             RectTransform rt = item.GetComponent<RectTransform>();
             rt.anchoredPosition = new Vector2(i * (itemWidth + itemSpacing), 0);
 
-            // ProjectCardUI scriptini bul ve verileri gönder
+            // ProjectCardUI scripti üzerinden verileri aktar
             ProjectCardUI cardUI = item.GetComponent<ProjectCardUI>();
             if (cardUI != null)
             {
-                cardUI.SetData(project.Name, project.Created_Date, project.Description);
+                cardUI.SetData(project.ID, project.Name, project.Created_Date, project.Description);
             }
-            else
+
+            // Tıklama olayını ata
+            Button btn = item.GetComponent<Button>();
+            if (btn != null)
             {
-                Debug.LogWarning("❗ Prefab'ta ProjectCardUI scripti eksik!");
+                int capturedID = project.ID; // Closure problemi yaşamamak için
+                btn.onClick.AddListener(() => OnProjectCardClicked(capturedID));
             }
         }
 
-        // Content genişliğini ayarla (scroll için)
+        // Scroll içeriğini genişlet
         float totalWidth = projects.Count * (itemWidth + itemSpacing);
         contentParent.sizeDelta = new Vector2(totalWidth, contentParent.sizeDelta.y);
+    }
+    public void ClearUI()
+    {
+        foreach (Transform child in contentParent)
+        {
+            Destroy(child.gameObject);
+        }
+    }
+
+    void OnProjectCardClicked(int projectId)
+    {
+        Debug.Log("🟢 Tıklanan proje ID: " + projectId);
+
+        // Önceki görevleri temizle
+        ClearTasks();
+
+        // Görevleri veritabanından çek
+        var tasks = _connection.Table<Project_Tasks>()
+                               .Where(t => t.projectId == projectId)
+                               .ToList();
+
+        foreach (var task in tasks)
+        {
+            GameObject taskItem = Instantiate(taskItemPrefab);
+            taskItem.GetComponentInChildren<TextMeshProUGUI>().text = task.title;
+
+            switch (task.status)
+            {
+                case "ToDo":
+                    taskItem.transform.SetParent(todoParent, false);
+                    break;
+                case "InProgress":
+                    taskItem.transform.SetParent(inProgressParent, false);
+                    break;
+                case "Done":
+                    taskItem.transform.SetParent(doneParent, false);
+                    break;
+                default:
+                    Debug.LogWarning("❗ Bilinmeyen görev durumu: " + task.status);
+                    break;
+            }
+        }
+    }
+
+    void ClearTasks()
+    {
+        foreach (Transform child in todoParent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        foreach (Transform child in inProgressParent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        foreach (Transform child in doneParent)
+        {
+            Destroy(child.gameObject);
+        }
     }
 }

@@ -416,7 +416,7 @@ GameObject:
   - component: {fileID: 3906705067217546865}
   - component: {fileID: 2873029444339329142}
   - component: {fileID: -5837340860943278724}
-  - component: {fileID: -2198826121591547221}
+  - component: {fileID: -8610063619310577703}
   m_Layer: 5
   m_Name: Project Panel
   m_TagString: Untagged
@@ -434,7 +434,7 @@ RectTransform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 2}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1129999618072911857}
   - {fileID: 1548771699232259208}
@@ -548,7 +548,7 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &-2198826121591547221
+--- !u!114 &-8610063619310577703
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

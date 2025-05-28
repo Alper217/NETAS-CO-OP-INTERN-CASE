@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using System;
 
 public class ProjectCardUI : MonoBehaviour
 {
@@ -7,9 +8,12 @@ public class ProjectCardUI : MonoBehaviour
     private TextMeshProUGUI projectDateText;
     private TextMeshProUGUI projectExplanationText;
 
-    public void SetData(string name, string date, string description)
+    public int projectId { get; private set; }
+
+    public void SetData(int id, string name, string date, string description)
     {
-        // Ýlk kez çaðrýldýðýnda TextMeshPro nesnelerini bul
+        projectId = id;
+
         if (projectNameText == null || projectDateText == null || projectExplanationText == null)
         {
             projectNameText = transform.Find("ProjectName")?.GetComponent<TextMeshProUGUI>();
@@ -17,7 +21,6 @@ public class ProjectCardUI : MonoBehaviour
             projectExplanationText = transform.Find("ProjectExplanation")?.GetComponent<TextMeshProUGUI>();
         }
 
-        // Verileri atama
         if (projectNameText != null) projectNameText.text = name;
         if (projectDateText != null) projectDateText.text = date;
         if (projectExplanationText != null) projectExplanationText.text = description;
