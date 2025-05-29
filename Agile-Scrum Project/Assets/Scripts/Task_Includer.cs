@@ -131,4 +131,55 @@ public class Task_Includer : MonoBehaviour
     {
         return selectedTaskId;
     }
+    private void SetTaskStatusIfCurrent(string requiredCurrentStatus, string newStatus)
+    {
+        if (selectedTaskId == -1)
+        {
+            Debug.LogWarning("❌ Durum güncellenemedi: Seçili görev yok.");
+            return;
+        }
+
+        var task = _connection.Table<Project_Tasks>().FirstOrDefault(t => t.id == selectedTaskId);
+
+        if (task == null)
+        {
+            Debug.LogWarning("❌ Görev veritabanında bulunamadı.");
+            return;
+        }
+
+        if (task.status != requiredCurrentStatus)
+        {
+            Debug.LogWarning($"⚠️ Bu işlem sadece '{requiredCurrentStatus}' durumundaki görevler için geçerlidir. Mevcut: '{task.status}'");
+            return;
+        }
+
+        task.status = newStatus;
+        _connection.Update(task);
+        Debug.Log($"✅ Görev durumu güncellendi: {requiredCurrentStatus} ➜ {newStatus}");
+
+        dbManager.ClearTasks();
+        dbManager.LoadTaskUI();
+    }
+
+    public void SetStatus_ToInProgress()
+    {
+        SetTaskStatusIfCurrent("ToDo", "InProgress");
+    }
+
+    public void SetStatus_ToDone()
+    {
+        SetTaskStatusIfCurrent("InProgress", "Done");
+    }
+
+    public void SetStatus_BackToInProgress()
+    {
+        SetTaskStatusIfCurrent("Done", "InProgress");
+    }
+
+    public void SetStatus_BackToToDo()
+    {
+        SetTaskStatusIfCurrent("InProgress", "ToDo");
+    }
+
+
 }

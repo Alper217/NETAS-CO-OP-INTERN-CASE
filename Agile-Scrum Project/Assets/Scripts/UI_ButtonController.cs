@@ -8,6 +8,7 @@ public class UI_ButtonController : MonoBehaviour
     [Header("Pages")]
     [SerializeField] GameObject newProjectPage;
     [SerializeField] GameObject taskPage;
+    [SerializeField] GameObject taskInfoPanel;
     [Header("Add Part")]
     [SerializeField] Button newProjectAddButton;
     [SerializeField] Button taskAddButton;
@@ -17,10 +18,17 @@ public class UI_ButtonController : MonoBehaviour
     [Header("Other Parts")]
     [SerializeField] Button closePageButton;
 
+    DoubleClickButton clickButton;
+    private void Start()
+    {
+        clickButton = GetComponent<DoubleClickButton>();
+    }
+
     public void ClosePage()
     {
         newProjectPage.SetActive(false);
         taskPage.SetActive(false);
+        taskInfoPanel.SetActive(false);
     }
     public void OpenaAddPage()
     {
@@ -46,5 +54,4 @@ public class UI_ButtonController : MonoBehaviour
         taskAddButton.gameObject.SetActive(false);
         taskUpdateButton.gameObject.SetActive(true);
     }
-
 }
