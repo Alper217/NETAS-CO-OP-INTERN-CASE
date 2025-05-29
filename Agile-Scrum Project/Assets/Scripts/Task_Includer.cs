@@ -14,6 +14,7 @@ public class Task_Includer : MonoBehaviour
     public DB_Manager dbManager; // 👈 Sahneden atanacak
 
     private SQLiteConnection _connection;
+    private int selectedTaskId = -1;
 
     void Start()
     {
@@ -21,6 +22,19 @@ public class Task_Includer : MonoBehaviour
         string dbPath = Path.Combine(Application.streamingAssetsPath, dbName);
         _connection = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadWrite);
         Debug.Log("✅ Veritabanına bağlandı (Görevler): " + dbPath);
+    }
+
+    public void SetSelectedTaskId(int taskId)
+    {
+        selectedTaskId = taskId;
+        Debug.Log($"🎯 Seçilen görev ID: {taskId}");
+
+        var task = _connection.Table<Project_Tasks>().FirstOrDefault(t => t.id == taskId);
+        if (task != null)
+        {
+            taskTitleInput.text = task.title;
+            taskDescriptionInput.text = task.description;
+        }
     }
 
     public void InsertTask()
@@ -51,12 +65,18 @@ public class Task_Includer : MonoBehaviour
         taskDescriptionInput.text = "";
 
         dbManager.ClearTasks();
-        dbManager.LoadTaskUI();// Eğer görevler bu fonksiyonla yükleniyorsa
+        dbManager.LoadTaskUI();
     }
 
-    public void UpdateSelectedTask(int taskId) // dışarıdan seçili task ID alınmalı
+    public void UpdateSelectedTask()
     {
-        var task = _connection.Table<Project_Tasks>().FirstOrDefault(t => t.id== taskId);
+        if (selectedTaskId == -1)
+        {
+            Debug.LogWarning("❌ Görev güncellenemedi: Seçili görev yok.");
+            return;
+        }
+
+        var task = _connection.Table<Project_Tasks>().FirstOrDefault(t => t.id == selectedTaskId);
 
         if (task != null)
         {
@@ -64,13 +84,14 @@ public class Task_Includer : MonoBehaviour
             task.description = taskDescriptionInput.text;
 
             _connection.Update(task);
-            Debug.Log($"📝 Görev güncellendi: ID {taskId}");
+            Debug.Log($"📝 Görev güncellendi: ID {selectedTaskId}");
 
             taskTitleInput.text = "";
             taskDescriptionInput.text = "";
+            selectedTaskId = -1; // Seçimi temizle
 
             dbManager.ClearTasks();
-            dbManager.LoadDataToUI();
+            dbManager.LoadTaskUI();
         }
         else
         {
@@ -78,22 +99,36 @@ public class Task_Includer : MonoBehaviour
         }
     }
 
-    public void DeleteSelectedTask(int taskId)
+    public void DeleteSelectedTask()
     {
-        var taskToDelete = _connection.Table<Project_Tasks>().FirstOrDefault(t => t.id == taskId);
+        if (selectedTaskId == -1)
+        {
+            Debug.LogWarning("❌ Görev silinemedi: Seçili görev yok.");
+            return;
+        }
+
+        var taskToDelete = _connection.Table<Project_Tasks>().FirstOrDefault(t => t.id == selectedTaskId);
 
         if (taskToDelete != null)
         {
             int deleted = _connection.Delete(taskToDelete);
-            Debug.Log($"🗑️ Görev silindi. ID: {taskId}, Silinen satır: {deleted}");
+            Debug.Log($"🗑️ Görev silindi. ID: {selectedTaskId}, Silinen satır: {deleted}");
 
-            //dbManager.ClearTasks();
-            //dbManager.ClearUI();
+            taskTitleInput.text = "";
+            taskDescriptionInput.text = "";
+            selectedTaskId = -1; // Seçimi temizle
 
+            dbManager.ClearTasks();
+            dbManager.LoadTaskUI();
         }
         else
         {
             Debug.LogWarning("❌ Silinmek istenen görev bulunamadı.");
         }
+    }
+
+    public int GetSelectedTaskId()
+    {
+        return selectedTaskId;
     }
 }

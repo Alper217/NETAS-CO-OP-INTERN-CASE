@@ -21,6 +21,9 @@ public class DB_Manager : MonoBehaviour
     private SQLiteConnection _connection;
     public int selectedProjectId = -1;
 
+    // Task_Includer referansı eklendi
+    public Task_Includer taskIncluder;
+
     void Start()
     {
         InitializeDatabase();
@@ -69,6 +72,7 @@ public class DB_Manager : MonoBehaviour
         float totalWidth = projects.Count * (itemWidth + itemSpacing);
         contentParent.sizeDelta = new Vector2(totalWidth, contentParent.sizeDelta.y);
     }
+
     public void LoadTaskUI()
     {
         if (selectedProjectId == -1)
@@ -86,7 +90,26 @@ public class DB_Manager : MonoBehaviour
         foreach (var task in tasks)
         {
             GameObject taskItem = Instantiate(taskItemPrefab);
-            taskItem.GetComponentInChildren<TextMeshProUGUI>().text = task.title;
+
+            // TaskCardUI component'ini kontrol et ve set et
+            TaskCardUI taskCardUI = taskItem.GetComponent<TaskCardUI>();
+            if (taskCardUI != null)
+            {
+                taskCardUI.SetData(task.id, task.projectId, task.title, task.description, task.status);
+            }
+            else
+            {
+                // Eğer TaskCardUI yoksa sadece text'i set et (eski sistem)
+                taskItem.GetComponentInChildren<TextMeshProUGUI>().text = task.title;
+            }
+
+            // Görev kartına tıklama olayı ekle
+            Button taskBtn = taskItem.GetComponent<Button>();
+            if (taskBtn != null)
+            {
+                int capturedTaskId = task.id;
+                taskBtn.onClick.AddListener(() => OnTaskCardClicked(capturedTaskId));
+            }
 
             switch (task.status)
             {
@@ -113,40 +136,29 @@ public class DB_Manager : MonoBehaviour
             Destroy(child.gameObject);
         }
     }
+
     void OnProjectCardClicked(int projectId)
     {
         Debug.Log("🟢 Tıklanan proje ID: " + projectId);
         selectedProjectId = projectId;
-        // Önceki görevleri temizle
-        ClearTasks();
+        LoadTaskUI(); // LoadTaskUI metodunu kullan
+    }
 
-        // Görevleri veritabanından çek
-        var tasks = _connection.Table<Project_Tasks>()
-                               .Where(t => t.projectId == projectId)
-                               .ToList();
+    void OnTaskCardClicked(int taskId)
+    {
+        Debug.Log("🎯 Tıklanan görev ID: " + taskId);
 
-        foreach (var task in tasks)
+        // Task_Includer'a seçili görev ID'sini gönder
+        if (taskIncluder != null)
         {
-            GameObject taskItem = Instantiate(taskItemPrefab);
-            taskItem.GetComponentInChildren<TextMeshProUGUI>().text = task.title;
-
-            switch (task.status)
-            {
-                case "ToDo":
-                    taskItem.transform.SetParent(todoParent, false);
-                    break;
-                case "InProgress":
-                    taskItem.transform.SetParent(inProgressParent, false);
-                    break;
-                case "Done":
-                    taskItem.transform.SetParent(doneParent, false);
-                    break;
-                default:
-                    Debug.LogWarning("❗ Bilinmeyen görev durumu: " + task.status);
-                    break;
-            }
+            taskIncluder.SetSelectedTaskId(taskId);
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Task_Includer referansı atanmamış!");
         }
     }
+
     public void ClearTasks()
     {
         foreach (Transform child in todoParent)
