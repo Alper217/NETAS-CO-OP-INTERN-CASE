@@ -24,6 +24,9 @@ public class DB_Manager : MonoBehaviour
     // Task_Includer referansı eklendi
     public Task_Includer taskIncluder;
 
+    // TaskInfoPanelController referansı eklendi
+    public TaskInfoPanelController taskInfoPanelController;
+
     void Start()
     {
         InitializeDatabase();
@@ -156,6 +159,16 @@ public class DB_Manager : MonoBehaviour
         else
         {
             Debug.LogWarning("⚠️ Task_Includer referansı atanmamış!");
+        }
+
+        // TaskInfoPanelController'a task bilgilerini yükleme talimatı ver
+        if (taskInfoPanelController != null)
+        {
+            taskInfoPanelController.LoadTaskInfo(taskId);
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ TaskInfoPanelController referansı atanmamış!");
         }
     }
 

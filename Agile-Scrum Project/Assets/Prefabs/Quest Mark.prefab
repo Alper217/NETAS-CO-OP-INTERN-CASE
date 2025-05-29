@@ -11,10 +11,10 @@ GameObject:
   - component: {fileID: 6985463011373486375}
   - component: {fileID: 3560995153251601700}
   - component: {fileID: 9089587459366944872}
-  - component: {fileID: -7399779946155338347}
   - component: {fileID: -8499269969168150824}
   - component: {fileID: 6519729284818960615}
   - component: {fileID: -3246278781770353347}
+  - component: {fileID: -779259580993893237}
   m_Layer: 5
   m_Name: Quest Mark
   m_TagString: Untagged
@@ -80,18 +80,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &-7399779946155338347
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6555095735859684532}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9f760f0219755e344b7998cef5bf3299, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &-8499269969168150824
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -170,8 +158,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetButton: {fileID: 6519729284818960615}
   doubleClickThreshold: 0.3
-  taskInfoPage: {fileID: 9006226809505608089, guid: 79e52549b229e6340a297e028eb55c1d, type: 3}
-  IsClicked: 0
+  IsClicked: 1
+--- !u!114 &-779259580993893237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6555095735859684532}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44f8695376547d04aaebd0b69efa43de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6965735057349398210
 GameObject:
   m_ObjectHideFlags: 0

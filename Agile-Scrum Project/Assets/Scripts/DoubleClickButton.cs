@@ -1,19 +1,21 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class DoubleClickButton : MonoBehaviour
 {
     public Button targetButton;
     public float doubleClickThreshold = 0.3f;
-    [SerializeField] GameObject taskInfoPage;
     private float lastClickTime = 0f;
     public bool IsClicked;
-     UI_ButtonController targetController;
+    public UI_ButtonController targetController; // public yaptık
+
 
     void Start()
     {
         targetButton.onClick.AddListener(OnButtonClick);
-        targetController = GetComponent<UI_ButtonController>();
+        targetController = FindObjectOfType<UI_ButtonController>();
+
     }
 
     private void OnButtonClick()
@@ -31,6 +33,7 @@ public class DoubleClickButton : MonoBehaviour
     }
     public void OnDoubleClick()
     {
-        taskInfoPage.SetActive(true);
+        Debug.Log("Çalıştı");
+        targetController.OpenTaskInfoPanel();
     }
 }

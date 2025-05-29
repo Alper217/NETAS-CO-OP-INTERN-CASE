@@ -8,7 +8,7 @@ public class UI_ButtonController : MonoBehaviour
     [Header("Pages")]
     [SerializeField] GameObject newProjectPage;
     [SerializeField] GameObject taskPage;
-    [SerializeField] GameObject taskInfoPanel;
+    [SerializeField] public GameObject taskInfoPanel;
     [Header("Add Part")]
     [SerializeField] Button newProjectAddButton;
     [SerializeField] Button taskAddButton;
@@ -53,5 +53,9 @@ public class UI_ButtonController : MonoBehaviour
         taskPage.SetActive(true);
         taskAddButton.gameObject.SetActive(false);
         taskUpdateButton.gameObject.SetActive(true);
+    }
+    public void OpenTaskInfoPanel()
+    {
+        taskInfoPanel.SetActive(true);
     }
 }
