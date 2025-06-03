@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 9089587459366944872}
   - component: {fileID: -8499269969168150824}
   - component: {fileID: 6519729284818960615}
-  - component: {fileID: -3246278781770353347}
   - component: {fileID: -779259580993893237}
   m_Layer: 5
   m_Name: Quest Mark
@@ -144,21 +143,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &-3246278781770353347
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6555095735859684532}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2f5b91609c4bd94489cb5e968b0d731b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  targetButton: {fileID: 6519729284818960615}
-  doubleClickThreshold: 0.3
-  IsClicked: 1
 --- !u!114 &-779259580993893237
 MonoBehaviour:
   m_ObjectHideFlags: 0

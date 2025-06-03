@@ -3,462 +3,478 @@ using System.Collections;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
-using SQLite4Unity3d;
-using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
+// ✨ Claude API için yeni data structures
 [System.Serializable]
-public class OpenAIRequest
+public class ClaudeRequest
 {
     public string model;
-    public OpenAIMessage[] messages;
-    public float temperature;
     public int max_tokens;
+    public ClaudeMessage[] messages;
 }
 
 [System.Serializable]
-public class OpenAIMessage
+public class ClaudeMessage
 {
     public string role;
     public string content;
 }
 
 [System.Serializable]
-public class OpenAIResponse
+public class ClaudeResponse
 {
-    public OpenAIChoice[] choices;
-    public OpenAIError error;
-}
-
-[System.Serializable]
-public class OpenAIChoice
-{
-    public OpenAIMessage message;
-}
-
-[System.Serializable]
-public class OpenAIError
-{
-    public string message;
+    public string id;
     public string type;
-    public string code;
+    public string role;
+    public ClaudeContent[] content;
+    public ClaudeError error;
 }
 
+[System.Serializable]
+public class ClaudeContent
+{
+    public string type;
+    public string text;
+}
+
+[System.Serializable]
+public class ClaudeError
+{
+    public string type;
+    public string message;
+}
+
+/// <summary>
+/// Claude API ile optimize edilmiş proje analizörü
+/// Anthropic Claude API kullanarak proje analizi yapar
+/// </summary>
 public class ProjectAnalyzer : MonoBehaviour
 {
-    [Header("OpenAI Settings")]
-    [SerializeField] private string openAIApiKey = "YOUR_API_KEY_HERE";
-    private const string OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+    [Header("Claude API Settings")]
+    [SerializeField] private string claudeApiKey = "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";
+    private const string CLAUDE_URL = "https://api.anthropic.com/v1/messages";
+    private const string CLAUDE_VERSION = "2023-06-01";
 
     [Header("References")]
-    public DB_Manager dbManager;
-    public Analysis_Result_Panel analysisResultPanel;
+    public ProjectManager projectManager;
+    public AnalysisResultPanel analysisResultPanel;
 
-    private SQLiteConnection _connection;
     private DateTime lastApiCall = DateTime.MinValue;
-    private const float MIN_API_INTERVAL = 3f; // API çağrıları arasında minimum 3 saniye bekle
+    private const float MIN_API_INTERVAL = 3f;
+    private bool isAnalyzing = false;
 
-    void Start()
+    // Cache sistemi
+    private readonly Dictionary<string, (string result, DateTime timestamp)> _analysisCache =
+        new Dictionary<string, (string, DateTime)>();
+    private const float CACHE_VALIDITY_HOURS = 1f;
+
+    private void Start()
     {
-        InitializeDatabase();
+        ValidateApiKey();
     }
 
-    void InitializeDatabase()
+    private void ValidateApiKey()
     {
-        string dbName = "NETAS-DATAS.db";
-        string dbPath = Path.Combine(Application.streamingAssetsPath, dbName);
-        _connection = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadWrite);
-        Debug.Log("🔗 ProjectAnalyzer veritabanına bağlandı: " + dbPath);
+        if (string.IsNullOrEmpty(claudeApiKey) || claudeApiKey == "YOUR_CLAUDE_API_KEY_HERE")
+        {
+            Debug.LogWarning("⚠️ Claude API key ayarlanmamış! Sadece basit analiz çalışacak.");
+        }
     }
 
     public void AnalyzeCurrentProject()
     {
-        if (dbManager.selectedProjectId == -1)
+        if (isAnalyzing)
         {
-            Debug.LogWarning("⚠️ Analiz yapılamadı: Seçili proje yok.");
-            if (analysisResultPanel != null)
-            {
-                analysisResultPanel.ShowResult("⚠️ Lütfen önce bir proje seçin!");
-            }
+            Debug.LogWarning("⏳ Analiz zaten devam ediyor...");
             return;
         }
 
-        if (string.IsNullOrEmpty(openAIApiKey) || openAIApiKey == "YOUR_API_KEY_HERE")
+        if (projectManager.SelectedProjectId == -1)
         {
-            Debug.LogError("❌ OpenAI API key ayarlanmamış!");
-            if (analysisResultPanel != null)
-            {
-                analysisResultPanel.ShowResult("❌ OpenAI API key ayarlanmamış!");
-            }
+            ShowError("⚠️ Lütfen önce bir proje seçin!");
             return;
         }
 
-        // API çağrıları arasında yeterli süre geçmiş mi kontrol et
-        float timeSinceLastCall = (float)(DateTime.Now - lastApiCall).TotalSeconds;
-        if (timeSinceLastCall < MIN_API_INTERVAL)
+        // Cache kontrolü
+        string cacheKey = GenerateCacheKey();
+        if (_analysisCache.TryGetValue(cacheKey, out var cachedResult))
         {
-            float waitTime = MIN_API_INTERVAL - timeSinceLastCall;
-            Debug.LogWarning($"⏳ API sınırı için {waitTime:F1} saniye bekleniyor...");
-            if (analysisResultPanel != null)
+            if ((DateTime.Now - cachedResult.timestamp).TotalHours < CACHE_VALIDITY_HOURS)
             {
-                analysisResultPanel.ShowResult($"⏳ Lütfen {waitTime:F1} saniye bekleyin ve tekrar deneyin.");
+                Debug.Log("📋 Cache'den analiz sonucu getiriliyor...");
+                analysisResultPanel?.ShowResult(cachedResult.result);
+                return;
             }
-            return;
+            else
+            {
+                _analysisCache.Remove(cacheKey);
+            }
         }
 
-        StartCoroutine(PerformAnalysis());
+        StartCoroutine(PerformAnalysisCoroutine());
     }
 
-    private IEnumerator PerformAnalysis()
+    private string GenerateCacheKey()
     {
-        if (analysisResultPanel != null)
-            analysisResultPanel.ShowLoading();
+        var tasks = DatabaseManager.Instance.GetTasksByProjectId(projectManager.SelectedProjectId);
+        string tasksSignature = string.Join(",", tasks.Select(t => $"{t.id}:{t.status}:{t.title.GetHashCode()}"));
+        return $"{projectManager.SelectedProjectId}:{tasksSignature.GetHashCode()}";
+    }
 
-        // API çağrısı zamanını kaydet
+    private IEnumerator PerformAnalysisCoroutine()
+    {
+        isAnalyzing = true;
+        analysisResultPanel?.ShowLoading();
+
+        try
+        {
+            var projectData = CollectProjectData();
+
+            // Minimal veri kontrolü
+            if (IsProjectDataMinimal(projectData))
+            {
+                string simpleAnalysis = GenerateSimpleAnalysis(projectData);
+                analysisResultPanel?.ShowResult(simpleAnalysis);
+                yield break;
+            }
+
+            // API Key kontrolü
+            if (string.IsNullOrEmpty(claudeApiKey) || claudeApiKey == "YOUR_CLAUDE_API_KEY_HERE")
+            {
+                string offlineAnalysis = GenerateOfflineAnalysis(projectData);
+                analysisResultPanel?.ShowResult(offlineAnalysis);
+                yield break;
+            }
+
+            // API rate limit kontrolü
+            float timeSinceLastCall = (float)(DateTime.Now - lastApiCall).TotalSeconds;
+            if (timeSinceLastCall < MIN_API_INTERVAL)
+            {
+                float waitTime = MIN_API_INTERVAL - timeSinceLastCall;
+                analysisResultPanel?.ShowResult($"⏳ API sınırı için {waitTime:F1} saniye bekleniyor...");
+                yield return new WaitForSeconds(waitTime);
+            }
+
+            yield return StartCoroutine(CallClaudeAPI(projectData));
+        }
+        finally
+        {
+            isAnalyzing = false;
+        }
+    }
+
+    private IEnumerator CallClaudeAPI(ProjectAnalysisData projectData)
+    {
         lastApiCall = DateTime.Now;
 
-        string projectData = CollectProjectData();
+        string analysisPrompt = CreateOptimizedPrompt(projectData);
 
-        // Proje verisini kontrol et - çok az veri varsa basit analiz yap
-        if (IsProjectDataMinimal(projectData))
+        var request = new ClaudeRequest
         {
-            string simpleAnalysis = GenerateSimpleAnalysis(projectData);
-            analysisResultPanel?.ShowResult(simpleAnalysis);
-            yield break;
-        }
-
-        string analysisPrompt = CreateAnalysisPrompt(projectData);
-
-        OpenAIRequest request = new OpenAIRequest
-        {
-            model = "gpt-3.5-turbo",
-            messages = new OpenAIMessage[]
+            model = "claude-3-5-sonnet-20241022",
+            max_tokens = 1024,
+            messages = new ClaudeMessage[]
             {
-                new OpenAIMessage
-                {
-                    role = "user",
-                    content = analysisPrompt
-                }
-            },
-            temperature = 0.7f,
-            max_tokens = 800 // Token sayısını azalttık
+                new ClaudeMessage { role = "user", content = analysisPrompt }
+            }
         };
 
         string jsonRequest = JsonUtility.ToJson(request);
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonRequest);
 
-        int maxRetries = 2; // Retry sayısını azalttık
-        int retryDelay = 5; // İlk bekleme süresini artırdık
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        using (var www = new UnityWebRequest(CLAUDE_URL, "POST"))
         {
-            Debug.Log($"🔄 API çağrısı yapılıyor... (Deneme: {attempt}/{maxRetries})");
+            www.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = new DownloadHandlerBuffer();
 
-            using (UnityWebRequest www = new UnityWebRequest(OPENAI_URL, "POST"))
+            // ✨ Claude API için özel header'lar
+            www.SetRequestHeader("Content-Type", "application/json");
+            www.SetRequestHeader("x-api-key", claudeApiKey);
+            www.SetRequestHeader("anthropic-version", CLAUDE_VERSION);
+
+            // Timeout ekle
+            www.timeout = 30;
+
+            Debug.Log("🤖 Claude API'ye istek gönderiliyor...");
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
             {
-                www.uploadHandler = new UploadHandlerRaw(bodyRaw);
-                www.downloadHandler = new DownloadHandlerBuffer();
-                www.SetRequestHeader("Content-Type", "application/json");
-                www.SetRequestHeader("Authorization", "Bearer " + openAIApiKey);
+                HandleSuccessfulResponse(www.downloadHandler.text);
+            }
+            else
+            {
+                HandleAPIError(www);
+            }
+        }
+    }
 
-                yield return www.SendWebRequest();
+    private void HandleSuccessfulResponse(string responseText)
+    {
+        try
+        {
+            Debug.Log($"🔍 Claude API Response: {responseText}");
 
-                if (www.result == UnityWebRequest.Result.Success)
+            var response = JsonUtility.FromJson<ClaudeResponse>(responseText);
+
+            // ✅ Debug: Response yapısını kontrol et
+            Debug.Log($"🔍 Response type: {response.type}");
+            Debug.Log($"🔍 Response role: {response.role}");
+            Debug.Log($"🔍 Content count: {response.content?.Length}");
+            Debug.Log($"🔍 Error: {response.error?.message}");
+
+            // Eğer error varsa ve message boş değilse hata göster
+            if (response.error != null && !string.IsNullOrEmpty(response.error.message))
+            {
+                ShowError($"❌ Claude API Hatası: {response.error.message}");
+                return;
+            }
+
+            if (response.content?.Length > 0)
+            {
+                // İlk content'i kontrol et
+                var firstContent = response.content[0];
+                Debug.Log($"🔍 First content type: {firstContent.type}");
+                Debug.Log($"🔍 First content text: {firstContent.text?.Substring(0, Math.Min(100, firstContent.text?.Length ?? 0))}...");
+
+                if (firstContent.type == "text" && !string.IsNullOrEmpty(firstContent.text))
                 {
-                    try
-                    {
-                        OpenAIResponse response = JsonUtility.FromJson<OpenAIResponse>(www.downloadHandler.text);
+                    string result = firstContent.text;
 
-                        if (response.error != null)
-                        {
-                            Debug.LogError($"❌ OpenAI API Error: {response.error.message}");
-                            analysisResultPanel?.ShowResult($"❌ API Hatası: {response.error.message}");
-                            yield break;
-                        }
+                    // Cache'e kaydet
+                    string cacheKey = GenerateCacheKey();
+                    _analysisCache[cacheKey] = (result, DateTime.Now);
 
-                        if (response.choices != null && response.choices.Length > 0)
-                        {
-                            string analysisResult = response.choices[0].message.content;
-                            Debug.Log("✅ Analiz tamamlandı!");
-                            analysisResultPanel?.ShowResult(analysisResult);
-                            yield break;
-                        }
-                        else
-                        {
-                            Debug.LogError("❌ API yanıtında veri bulunamadı");
-                            analysisResultPanel?.ShowResult("❌ Analiz sonucu alınamadı.");
-                            yield break;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogError("❌ JSON parse hatası: " + e.Message);
-                        Debug.LogError("Response: " + www.downloadHandler.text);
-                        analysisResultPanel?.ShowResult("⚠️ Analiz sonucu işlenirken hata oluştu.");
-                        yield break;
-                    }
-                }
-                else if (www.responseCode == 429)
-                {
-                    Debug.LogWarning($"⚠️ API sınırı aşıldı (429), {retryDelay} saniye sonra tekrar denenecek... (Deneme: {attempt}/{maxRetries})");
+                    analysisResultPanel?.ShowResult(result);
 
-                    if (attempt < maxRetries)
+                    // ✨ Analysis panelini aç ve scroll'u düzelt
+                    var uiController = FindObjectOfType<UIController>();
+                    if (uiController != null)
                     {
-                        yield return new WaitForSeconds(retryDelay);
-                        retryDelay *= 2; // exponential backoff
+                        uiController.OpenAnalysisPanel();
                     }
-                    else
-                    {
-                        analysisResultPanel?.ShowResult("❌ API sınırı aşıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.");
-                        yield break;
-                    }
-                }
-                else if (www.responseCode == 401)
-                {
-                    Debug.LogError("❌ API Key geçersiz veya yetkisiz erişim");
-                    analysisResultPanel?.ShowResult("❌ API Key hatası. Lütfen API key'inizi kontrol edin.");
-                    yield break;
+
+                    Debug.Log("✅ Claude analizi tamamlandı!");
                 }
                 else
                 {
-                    Debug.LogError($"❌ OpenAI API hatası ({www.responseCode}): " + www.error);
-                    Debug.LogError("Response: " + www.downloadHandler.text);
-                    analysisResultPanel?.ShowResult($"⚠️ Analiz sırasında hata oluştu: {www.error}");
-                    yield break;
+                    ShowError($"❌ Content type hatalı: {firstContent.type}");
                 }
             }
-        }
-    }
-
-    private bool IsProjectDataMinimal(string projectData)
-    {
-        if (_connection == null)
-        {
-            InitializeDatabase();
-        }
-
-        // Görev sayılarını direkt veritabanından kontrol et
-        var allTasks = _connection.Table<Project_Tasks>()
-                                 .Where(t => t.projectId == dbManager.selectedProjectId)
-                                 .ToList();
-
-        var todoTasks = allTasks.Where(t => t.status == "ToDo").Count();
-        var inProgressTasks = allTasks.Where(t => t.status == "InProgress").Count();
-        var doneTasks = allTasks.Where(t => t.status == "Done").Count();
-
-        int totalTasks = allTasks.Count;
-
-        Debug.Log($"📊 Görev Dağılımı - Todo: {todoTasks}, InProgress: {inProgressTasks}, Done: {doneTasks}, Toplam: {totalTasks}");
-
-        // Eğer toplam görev 3 ve altındaysa VE çoğunlukla boşsa minimal say
-        if (totalTasks <= 3)
-        {
-            return true;
-        }
-
-        // Eğer hiç görev yoksa minimal
-        if (totalTasks == 0)
-        {
-            return true;
-        }
-
-        // Eğer sadece 1-2 tane tek kelimelik görev varsa minimal say
-        if (totalTasks <= 2)
-        {
-            var taskTitles = allTasks.Select(t => t.title?.Trim() ?? "").ToList();
-            bool hasOnlySimpleTasks = taskTitles.All(title =>
-                string.IsNullOrEmpty(title) || title.Split(' ').Length <= 2);
-
-            if (hasOnlySimpleTasks)
+            else
             {
-                return true;
+                ShowError("❌ Claude API yanıtında content bulunamadı");
             }
         }
-
-        // Diğer durumlarda (4+ görev) tam analiz yap
-        return false;
+        catch (Exception ex)
+        {
+            Debug.LogError($"❌ Claude JSON parse hatası: {ex.Message}");
+            Debug.LogError($"❌ Response: {responseText}");
+            ShowError("⚠️ Analiz sonucu işlenirken hata oluştu.");
+        }
     }
 
-    private string GenerateSimpleAnalysis(string projectData)
+    private void HandleAPIError(UnityWebRequest www)
     {
-        if (_connection == null)
+        Debug.LogError($"❌ Claude API Error: {www.error}");
+        Debug.LogError($"❌ Response Code: {www.responseCode}");
+        Debug.LogError($"❌ Response: {www.downloadHandler.text}");
+
+        switch (www.responseCode)
         {
-            InitializeDatabase();
+            case 429:
+                ShowError("❌ Claude API sınırı aşıldı. Lütfen birkaç dakika bekleyin.");
+                break;
+            case 401:
+                ShowError("❌ Claude API Key geçersiz. Lütfen API key'inizi kontrol edin.");
+                break;
+            case 400:
+                ShowError("❌ Claude API istek formatı hatalı.");
+                break;
+            default:
+                ShowError($"⚠️ Claude API hatası ({www.responseCode}): {www.error}");
+                break;
         }
+    }
 
-        // Görev istatistiklerini al
-        var allTasks = _connection.Table<Project_Tasks>()
-                                 .Where(t => t.projectId == dbManager.selectedProjectId)
-                                 .ToList();
+    private ProjectAnalysisData CollectProjectData()
+    {
+        var project = DatabaseManager.Instance.GetById<ProjectInfoData>(projectManager.SelectedProjectId);
+        var tasks = DatabaseManager.Instance.GetTasksByProjectId(projectManager.SelectedProjectId);
 
-        var todoCount = allTasks.Count(t => t.status == "ToDo");
-        var inProgressCount = allTasks.Count(t => t.status == "InProgress");
-        var doneCount = allTasks.Count(t => t.status == "Done");
-        var totalCount = allTasks.Count;
-
-        StringBuilder analysis = new StringBuilder();
-        analysis.AppendLine("📊 **Basit Proje Analizi**");
-        analysis.AppendLine();
-        analysis.AppendLine($"🔢 **Görev Dağılımı:** {totalCount} toplam görev");
-        analysis.AppendLine($"   • ⏳ Yapılacak: {todoCount}");
-        analysis.AppendLine($"   • 🔄 Devam Eden: {inProgressCount}");
-        analysis.AppendLine($"   • ✅ Tamamlanan: {doneCount}");
-        analysis.AppendLine();
-
-        if (totalCount == 0)
+        return new ProjectAnalysisData
         {
-            analysis.AppendLine("🔍 **Durum:** Proje henüz başlamamış");
-            analysis.AppendLine();
+            Project = project,
+            Tasks = tasks,
+            TodoTasks = tasks.Where(t => t.status == "ToDo").ToList(),
+            InProgressTasks = tasks.Where(t => t.status == "InProgress").ToList(),
+            DoneTasks = tasks.Where(t => t.status == "Done").ToList()
+        };
+    }
+
+    private bool IsProjectDataMinimal(ProjectAnalysisData data)
+    {
+        return data.Tasks.Count <= 3 ||
+               data.Tasks.Count == 0 ||
+               (data.Tasks.Count <= 2 && data.Tasks.All(t =>
+                   string.IsNullOrEmpty(t.title) || t.title.Split(' ').Length <= 2));
+    }
+
+    private string GenerateSimpleAnalysis(ProjectAnalysisData data)
+    {
+        var analysis = new StringBuilder();
+        analysis.AppendLine("📊 **Basit Proje Analizi**\n");
+
+        analysis.AppendLine($"🔢 **Görev Dağılımı:** {data.Tasks.Count} toplam görev");
+        analysis.AppendLine($"   • ⏳ Yapılacak: {data.TodoTasks.Count}");
+        analysis.AppendLine($"   • 🔄 Devam Eden: {data.InProgressTasks.Count}");
+        analysis.AppendLine($"   • ✅ Tamamlanan: {data.DoneTasks.Count}\n");
+
+        if (data.Tasks.Count == 0)
+        {
+            analysis.AppendLine("🔍 **Durum:** Proje henüz başlamamış\n");
             analysis.AppendLine("💡 **Öneriler:**");
             analysis.AppendLine("• Projeniz için görevler eklemeye başlayın");
             analysis.AppendLine("• Projenizi küçük, yönetilebilir görevlere bölün");
             analysis.AppendLine("• İlk olarak en önemli görevleri belirleyin");
         }
-        else if (totalCount <= 3)
+        else
         {
-            analysis.AppendLine("🔍 **Durum:** Küçük ölçekli proje");
-            analysis.AppendLine();
+            float progressPercent = data.Tasks.Count > 0 ? (float)data.DoneTasks.Count / data.Tasks.Count * 100 : 0;
+            analysis.AppendLine($"📈 **İlerleme:** %{progressPercent:F0} tamamlandı\n");
+
             analysis.AppendLine("💡 **Öneriler:**");
-            if (todoCount > 0)
-            {
-                analysis.AppendLine("• Yapılacak görevlere öncelik verin");
-            }
-            if (inProgressCount > 1)
-            {
-                analysis.AppendLine("• Aynı anda çok fazla göreve odaklanmayın");
-            }
-            if (doneCount > 0)
-            {
-                analysis.AppendLine($"• Harika! {doneCount} görev tamamlandı");
-            }
-            analysis.AppendLine("• Proje büyüdükçe daha fazla görev ekleyebilirsiniz");
+            if (data.TodoTasks.Count > 0) analysis.AppendLine("• Yapılacak görevlere öncelik verin");
+            if (data.InProgressTasks.Count > 1) analysis.AppendLine("• Aynı anda çok fazla göreve odaklanmayın");
+            if (data.DoneTasks.Count > 0) analysis.AppendLine($"• Harika! {data.DoneTasks.Count} görev tamamlandı");
         }
 
-        // İlerleme yüzdesi hesapla
-        if (totalCount > 0)
-        {
-            float progressPercent = (float)doneCount / totalCount * 100;
-            analysis.AppendLine();
-            analysis.AppendLine($"📈 **İlerleme:** %{progressPercent:F0} tamamlandı");
-
-            if (progressPercent == 0)
-            {
-                analysis.AppendLine("• Projeye başlamak için ilk görevi seçin!");
-            }
-            else if (progressPercent < 30)
-            {
-                analysis.AppendLine("• Proje yeni başlamış, devam edin!");
-            }
-            else if (progressPercent < 70)
-            {
-                analysis.AppendLine("• İyi ilerleme kaydediyorsunuz!");
-            }
-            else if (progressPercent < 100)
-            {
-                analysis.AppendLine("• Son sprint! Bitiş çizgisine yaklaştınız!");
-            }
-            else
-            {
-                analysis.AppendLine("• 🎉 Tebrikler! Proje tamamlandı!");
-            }
-        }
-
-        analysis.AppendLine();
-        analysis.AppendLine("ℹ️ *Daha detaylı AI analizi için 4+ görev ekleyin.*");
-
+        analysis.AppendLine("\nℹ️ *Daha detaylı Claude analizi için 4+ görev ekleyin.*");
         return analysis.ToString();
     }
 
-    private string CollectProjectData()
+    private string GenerateOfflineAnalysis(ProjectAnalysisData data)
     {
-        if (_connection == null)
+        var analysis = new StringBuilder();
+        analysis.AppendLine("🤖 **Proje Analizi (Offline)**\n");
+
+        analysis.AppendLine($"📋 **Proje:** {data.Project?.Name ?? "Bilinmeyen"}");
+        analysis.AppendLine($"📅 **Oluşturulma:** {data.Project?.Created_Date ?? "Bilinmeyen"}\n");
+
+        analysis.AppendLine($"📊 **Görev İstatistikleri:**");
+        analysis.AppendLine($"• Toplam: {data.Tasks.Count}");
+        analysis.AppendLine($"• ToDo: {data.TodoTasks.Count}");
+        analysis.AppendLine($"• InProgress: {data.InProgressTasks.Count}");
+        analysis.AppendLine($"• Done: {data.DoneTasks.Count}\n");
+
+        // İlerleme analizi
+        if (data.Tasks.Count > 0)
         {
-            InitializeDatabase();
+            float completionRate = (float)data.DoneTasks.Count / data.Tasks.Count;
+            analysis.AppendLine("🎯 **Durum Analizi:**");
+
+            if (completionRate == 0)
+                analysis.AppendLine("• Proje başlangıç aşamasında");
+            else if (completionRate < 0.3f)
+                analysis.AppendLine("• Proje erken aşamada, iyi ilerleme");
+            else if (completionRate < 0.7f)
+                analysis.AppendLine("• Proje orta aşamada, düzenli ilerleme");
+            else if (completionRate < 1.0f)
+                analysis.AppendLine("• Proje son aşamada, tamamlanmaya yakın");
+            else
+                analysis.AppendLine("• 🎉 Proje tamamlandı!");
         }
 
-        // Proje bilgilerini al
-        var project = _connection.Table<Project_Info_Data>()
-                                .FirstOrDefault(p => p.ID == dbManager.selectedProjectId);
+        analysis.AppendLine("\n💡 **Öneriler:**");
+        if (data.InProgressTasks.Count > 3)
+            analysis.AppendLine("• Aynı anda çok fazla görev aktif, odaklanmayı artırın");
+        if (data.TodoTasks.Count > data.InProgressTasks.Count * 3)
+            analysis.AppendLine("• Çok fazla bekleyen görev var, önceliklendirin");
+        if (data.Tasks.Count > 0 && data.DoneTasks.Count == 0)
+            analysis.AppendLine("• İlk görevi tamamlayarak momentum kazanın");
 
-        if (project == null)
+        analysis.AppendLine("\nℹ️ *Claude analizi için API key gerekli.*");
+        return analysis.ToString();
+    }
+
+    private string CreateOptimizedPrompt(ProjectAnalysisData data)
+    {
+        var prompt = new StringBuilder();
+        prompt.AppendLine($"Proje Analizi İsteği:");
+        prompt.AppendLine($"Proje Adı: {data.Project?.Name}");
+        prompt.AppendLine($"Açıklama: {data.Project?.Description}");
+        prompt.AppendLine($"Toplam Görev: {data.Tasks.Count}\n");
+
+        prompt.AppendLine("=== YAPILACAK GÖREVLER ===");
+        if (data.TodoTasks.Count > 0)
         {
-            return "Proje bulunamadı.";
-        }
-
-        // Görevleri al ve kategorilere ayır
-        var allTasks = _connection.Table<Project_Tasks>()
-                                 .Where(t => t.projectId == dbManager.selectedProjectId)
-                                 .ToList();
-
-        var todoTasks = allTasks.Where(t => t.status == "ToDo").ToList();
-        var inProgressTasks = allTasks.Where(t => t.status == "InProgress").ToList();
-        var doneTasks = allTasks.Where(t => t.status == "Done").ToList();
-
-        // Veri string'ini oluştur
-        StringBuilder dataBuilder = new StringBuilder();
-        dataBuilder.AppendLine($"Proje Adı: {project.Name}");
-        dataBuilder.AppendLine($"Proje Açıklaması: {project.Description}");
-        dataBuilder.AppendLine($"Toplam Görev: {allTasks.Count}");
-        dataBuilder.AppendLine();
-
-        dataBuilder.AppendLine("=== YAPILACAKLAR (ToDo) ===");
-        if (todoTasks.Count > 0)
-        {
-            int limit = 8; // Limiti düşürdük
-            foreach (var task in todoTasks.Take(limit))
+            foreach (var task in data.TodoTasks.Take(5))
             {
-                string description = string.IsNullOrEmpty(task.description) ? "" :
-                    $" - {task.description.Substring(0, Math.Min(task.description.Length, 50))}...";
-                dataBuilder.AppendLine($"• {task.title}{description}");
+                string desc = !string.IsNullOrEmpty(task.description) && task.description.Length > 30
+                    ? task.description.Substring(0, 30) + "..."
+                    : task.description;
+                prompt.AppendLine($"• {task.title}");
+                if (!string.IsNullOrEmpty(desc)) prompt.AppendLine($"  Açıklama: {desc}");
             }
-            if (todoTasks.Count > limit)
+            if (data.TodoTasks.Count > 5)
+                prompt.AppendLine($"• +{data.TodoTasks.Count - 5} görev daha");
+        }
+        else
+        {
+            prompt.AppendLine("• Yapılacak görev yok");
+        }
+
+        prompt.AppendLine("\n=== DEVAM EDEN GÖREVLER ===");
+        if (data.InProgressTasks.Count > 0)
+        {
+            foreach (var task in data.InProgressTasks.Take(3))
             {
-                dataBuilder.AppendLine($"• ...ve {todoTasks.Count - limit} görev daha");
+                prompt.AppendLine($"• {task.title}");
             }
         }
         else
         {
-            dataBuilder.AppendLine("• Henüz yapılacak görev yok");
+            prompt.AppendLine("• Devam eden görev yok");
         }
 
-        dataBuilder.AppendLine();
-        dataBuilder.AppendLine("=== DEVAM EDENLER (InProgress) ===");
-        if (inProgressTasks.Count > 0)
-        {
-            foreach (var task in inProgressTasks.Take(5)) // Limit ekledik
-            {
-                dataBuilder.AppendLine($"• {task.title}");
-            }
-            if (inProgressTasks.Count > 5)
-            {
-                dataBuilder.AppendLine($"• ...ve {inProgressTasks.Count - 5} görev daha");
-            }
-        }
-        else
-        {
-            dataBuilder.AppendLine("• Şu anda devam eden görev yok");
-        }
+        prompt.AppendLine($"\n=== TAMAMLANAN GÖREVLER ===");
+        prompt.AppendLine($"• {data.DoneTasks.Count} görev tamamlandı");
 
-        dataBuilder.AppendLine();
-        dataBuilder.AppendLine("=== TAMAMLANANLAR (Done) ===");
-        dataBuilder.AppendLine($"• Toplam {doneTasks.Count} görev tamamlandı");
+        prompt.AppendLine("\nLütfen bu proje için kapsamlı bir analiz yap. Aşağıdaki konuları ele al:");
+        prompt.AppendLine("1. 🎯 Öncelikli görevler ve öneriler");
+        prompt.AppendLine("2. 📈 Proje ilerleme durumu ve tahminler");
+        prompt.AppendLine("3. ⚠️ Risk analizi ve potansiyel engelleyiciler");
+        prompt.AppendLine("4. 💡 İyileştirme önerileri ve stratejiler");
+        prompt.AppendLine("5. 📊 Genel değerlendirme ve sonuç");
+        prompt.AppendLine("\nCevabını Türkçe ver ve markdown formatında düzenle. Maksimum 800 kelime.");
 
-        return dataBuilder.ToString();
+        return prompt.ToString();
     }
 
-    private string CreateAnalysisPrompt(string projectData)
+    private void ShowError(string message)
     {
-        return $@"Proje analizi yap:
+        Debug.LogWarning(message);
+        analysisResultPanel?.ShowResult(message);
 
-{projectData}
-
-Kısa ve öz öneriler ver:
-1. Öncelikli görevler
-2. Sıralama önerisi  
-3. Genel durum
-4. İyileştirme önerileri
-
-Maksimum 500 kelime, Türkçe cevap ver.";
+        // ✨ Analysis panelini aç ve scroll'u düzelt
+        var uiController = FindObjectOfType<UIController>();
+        if (uiController != null)
+        {
+            uiController.OpenAnalysisPanel();
+        }
     }
+}
+
+/// <summary>
+/// Proje analizi için veri yapısı
+/// </summary>
+public class ProjectAnalysisData
+{
+    public ProjectInfoData Project { get; set; }
+    public List<ProjectTasks> Tasks { get; set; } = new List<ProjectTasks>();
+    public List<ProjectTasks> TodoTasks { get; set; } = new List<ProjectTasks>();
+    public List<ProjectTasks> InProgressTasks { get; set; } = new List<ProjectTasks>();
+    public List<ProjectTasks> DoneTasks { get; set; } = new List<ProjectTasks>();
 }
