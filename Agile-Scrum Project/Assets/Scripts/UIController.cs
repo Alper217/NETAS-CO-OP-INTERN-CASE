@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 /// <summary>
 /// Fixed UI control class - Button event ordering corrected
 /// Double-click support added - single click only selects, double click opens info panel
+/// Screenshot flash effect added
 /// </summary>
 public class UIController : MonoBehaviour
 {
@@ -45,6 +47,10 @@ public class UIController : MonoBehaviour
     [Header("Info Panel Buttons")]
     public Button openTaskInfoButton;       // Manual info panel open button
 
+    [Header("Screenshot Notification")]
+    public GameObject photoSavedPanel;      // "Photo Saved to Desktop" panel
+    public float notificationDuration = 2f; // Notification display duration
+
     [Header("References")]
     public ProjectManager projectManager;
     public ProjectAnalyzer projectAnalyzer;
@@ -54,9 +60,22 @@ public class UIController : MonoBehaviour
         SetupButtonEvents();
         CloseAllPanels();
         InitializeButtonStates();
+        InitializeNotificationPanel();
 
         Debug.Log("UIController initialized");
     }
+
+    private void InitializeNotificationPanel()
+    {
+        // Photo saved panel'i başlangıçta gizle
+        if (photoSavedPanel != null)
+        {
+            photoSavedPanel.SetActive(false);
+        }
+
+        Debug.Log("Photo saved notification panel initialized");
+    }
+
     private void InitializeButtonStates()
     {
         // Project buttons - deaktif
@@ -84,6 +103,7 @@ public class UIController : MonoBehaviour
 
         Debug.Log("All buttons initialized as disabled except Add Project");
     }
+
     private void SetupButtonEvents()
     {
         // Main menu buttons - only open panels
@@ -215,8 +235,9 @@ public class UIController : MonoBehaviour
             }
         });
 
+        // Screenshot button with delayed notification
         screenshotButton?.onClick.AddListener(() => {
-            projectManager?.TakeProjectScreenshot();
+            StartCoroutine(TakeScreenshotWithDelayedNotification());
         });
 
         closeAllPanelsButton?.onClick.AddListener(CloseAllPanels);
@@ -228,6 +249,131 @@ public class UIController : MonoBehaviour
             projectManager.OnTaskSelected += OnTaskSelected;
         }
     }
+
+    #region Photo Saved Notification Methods
+
+    /// <summary>
+    /// Takes screenshot first, then shows notification after a delay
+    /// This ensures the notification doesn't appear in the screenshot
+    /// </summary>
+    private IEnumerator TakeScreenshotWithDelayedNotification()
+    {
+        Debug.Log("Taking screenshot...");
+
+        // Önce screenshot'ı al
+        projectManager?.TakeProjectScreenshot();
+
+        // Screenshot'ın alınması için kısa bir süre bekle
+        // (ScreenCapture.CaptureScreenshot asenkron çalışır)
+        yield return new WaitForSeconds(0.1f);
+
+        // Şimdi notification'ı göster
+        ShowPhotoSavedNotification();
+
+        Debug.Log("Screenshot taken, notification shown");
+    }
+
+    /// <summary>
+    /// Shows the "Photo Saved to Desktop" notification panel
+    /// </summary>
+    public void ShowPhotoSavedNotification()
+    {
+        if (photoSavedPanel != null)
+        {
+            StartCoroutine(PhotoSavedNotificationCoroutine());
+        }
+        else
+        {
+            Debug.LogWarning("Photo saved panel not assigned! Notification cannot be shown.");
+        }
+    }
+
+    private IEnumerator PhotoSavedNotificationCoroutine()
+    {
+        // Panel'i aktif hale getir
+        photoSavedPanel.SetActive(true);
+
+        // Panel'in CanvasGroup bileşenini al veya ekle
+        CanvasGroup canvasGroup = photoSavedPanel.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+        {
+            canvasGroup = photoSavedPanel.AddComponent<CanvasGroup>();
+        }
+
+        // Başlangıçta tam opak yap
+        canvasGroup.alpha = 1f;
+
+        Debug.Log("Photo saved notification shown");
+
+        // İlk 1.5 saniye bekle (tam görünür)
+        float displayTime = notificationDuration * 0.75f; // %75'i görünür kalma süresi
+        yield return new WaitForSeconds(displayTime);
+
+        // Son 0.5 saniyede yavaşça kaybet
+        float fadeTime = notificationDuration * 0.25f; // %25'i fade süresi
+        float elapsed = 0f;
+
+        while (elapsed < fadeTime)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / fadeTime;
+
+            // Smooth fade out (ease-out curve)
+            float alpha = Mathf.Lerp(1f, 0f, t * t);
+            canvasGroup.alpha = alpha;
+
+            yield return null;
+        }
+
+        // Tamamen şeffaf yap ve deaktif et
+        canvasGroup.alpha = 0f;
+        photoSavedPanel.SetActive(false);
+
+        Debug.Log("Photo saved notification hidden");
+    }
+
+    /// <summary>
+    /// Public method to trigger photo saved notification from other scripts
+    /// </summary>
+    public void TriggerPhotoSavedNotification()
+    {
+        ShowPhotoSavedNotification();
+    }
+
+    /// <summary>
+    /// Takes screenshot without showing notification (silent mode)
+    /// </summary>
+    public void TakeScreenshotSilent()
+    {
+        Debug.Log("Taking silent screenshot...");
+        projectManager?.TakeProjectScreenshot();
+    }
+
+    /// <summary>
+    /// Immediately hide the photo saved notification if showing
+    /// </summary>
+    public void HidePhotoSavedNotification()
+    {
+        if (photoSavedPanel != null)
+        {
+            // Stop any running coroutines for this panel
+            StopCoroutine(nameof(PhotoSavedNotificationCoroutine));
+
+            // Hide panel immediately
+            photoSavedPanel.SetActive(false);
+
+            // Reset alpha if CanvasGroup exists
+            CanvasGroup canvasGroup = photoSavedPanel.GetComponent<CanvasGroup>();
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = 1f;
+            }
+
+            Debug.Log("Photo saved notification force hidden");
+        }
+    }
+
+    #endregion
 
     private void OnProjectSelected(int projectId)
     {

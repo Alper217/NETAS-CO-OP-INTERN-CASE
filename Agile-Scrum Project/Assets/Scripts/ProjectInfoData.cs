@@ -13,7 +13,6 @@ public class ProjectInfoData
     public string Name { get; set; }
     public string Description { get; set; }
     public string Created_Date { get; set; }
-    public string Modified_Date { get; set; }
 
     // Parameterless constructor
     public ProjectInfoData()
@@ -26,19 +25,12 @@ public class ProjectInfoData
         Name = name?.Trim() ?? "";
         Description = description?.Trim() ?? "";
         Created_Date = DateTime.Now.ToString("dd/MM/yyyy");
-        Modified_Date = Created_Date;
     }
 
     // Validation
     public bool IsValid()
     {
         return !string.IsNullOrWhiteSpace(Name);
-    }
-
-    // Update modification date
-    public void MarkAsModified()
-    {
-        Modified_Date = DateTime.Now.ToString("dd/MM/yyyy");
     }
 
     public override string ToString()

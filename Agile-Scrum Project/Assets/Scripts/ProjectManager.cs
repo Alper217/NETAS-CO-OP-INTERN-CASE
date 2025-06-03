@@ -97,7 +97,6 @@ public class ProjectManager : MonoBehaviour
         {
             project.Name = projectNameInput.text.Trim();
             project.Description = projectDescriptionInput.text?.Trim() ?? "";
-            project.MarkAsModified();
 
             DatabaseManager.Instance.UpdateItem(project);
             Debug.Log($"Project updated: {project.Name}");
