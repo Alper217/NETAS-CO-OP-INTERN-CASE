@@ -3,9 +3,9 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Mevcut veritabanı şemasıyla uyumlu ProjectTasks modeli
-/// Kısıtlama yok - mevcut şema korunuyor
-/// ✅ Veritabanı şeması ile tamamen uyumlu hale getirildi
+/// ProjectTasks model compatible with existing database schema
+/// No restrictions - existing schema is preserved
+/// Fully compatible with database schema
 /// </summary>
 public class ProjectTasks
 {
@@ -18,7 +18,7 @@ public class ProjectTasks
     public string status { get; set; } = "ToDo";
     public string createdDate { get; set; }
 
-    // ❌ KALDIRILDI: Veritabanında modifiedDate kolonu yok!
+    // REMOVED: modifiedDate column does not exist in database!
     // public string modifiedDate { get; set; }
 
     // Parameterless constructor
@@ -34,7 +34,7 @@ public class ProjectTasks
         this.description = description?.Trim() ?? "";
         this.status = status;
         this.createdDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-        // modifiedDate yok - sadece createdDate kullanılıyor
+        // modifiedDate not used - only createdDate is available
     }
 
     // Validation method
@@ -50,12 +50,12 @@ public class ProjectTasks
         return status == "ToDo" || status == "InProgress" || status == "Done";
     }
 
-    // ❌ KALDIRILDI: Veritabanında modifiedDate kolonu olmadığı için devre dışı
+    // DISABLED: modifiedDate column does not exist in database
     public void MarkAsModified()
     {
         // modifiedDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-        // Veritabanında modifiedDate kolonu yok, sadece createdDate var
-        Debug.Log("⚠️ ModifiedDate kolonu veritabanında yok - güncelleme atlandı");
+        // modifiedDate column does not exist in database, only createdDate is available
+        Debug.Log("ModifiedDate column does not exist in database - update skipped");
     }
 
     public override string ToString()

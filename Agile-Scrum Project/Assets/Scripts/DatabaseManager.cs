@@ -6,8 +6,8 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Mevcut NETAS-DATAS.db şemasıyla tamamen uyumlu DatabaseManager
-/// ProjectInfoData ve ProjectTasks tablolarını kullanır
+/// Compatible DatabaseManager for existing NETAS-DATAS.db schema
+/// Manages ProjectInfoData and ProjectTasks tables
 /// </summary>
 public class DatabaseManager : MonoBehaviour
 {
@@ -45,30 +45,28 @@ public class DatabaseManager : MonoBehaviour
             string dbName = "NETAS-DATAS.db";
             string dbPath = Path.Combine(Application.streamingAssetsPath, dbName);
 
-            Debug.Log($"🗂️ Veritabanı yolu: {dbPath}");
-            Debug.Log($"📂 Dosya var mı? {File.Exists(dbPath)}");
+            Debug.Log($"Database path: {dbPath}");
+            Debug.Log($"File exists: {File.Exists(dbPath)}");
 
             if (!File.Exists(dbPath))
             {
-                Debug.LogError($"❌ Veritabanı dosyası bulunamadı: {dbPath}");
-                Debug.LogError("❌ NETAS-DATAS.db dosyasını StreamingAssets klasörüne kopyalayın!");
+                Debug.LogError($"Database file not found: {dbPath}");
+                Debug.LogError("Please copy NETAS-DATAS.db file to StreamingAssets folder!");
                 return;
             }
 
             lock (_lockObject)
             {
-                // Mevcut veritabanına sadece bağlan - tablo oluşturma
                 _connection = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadWrite);
 
-                Debug.Log("✅ Mevcut veritabanına bağlandı: " + dbPath);
+                Debug.Log("Connected to existing database: " + dbPath);
 
-                // Mevcut verileri listele
                 ListExistingData();
             }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"❌ Veritabanı başlatma hatası: {ex.Message}");
+            Debug.LogError($"Database initialization error: {ex.Message}");
         }
     }
 
@@ -76,43 +74,41 @@ public class DatabaseManager : MonoBehaviour
     {
         try
         {
-            Debug.Log("🔍 === MEVCUT VERİTABANI İÇERİĞİ ===");
+            Debug.Log("=== EXISTING DATABASE CONTENT ===");
 
-            // ProjectInfoData tablosundan veri çek
             var projectCount = _connection.ExecuteScalar<int>("SELECT COUNT(*) FROM ProjectInfoData");
-            Debug.Log($"📂 ProjectInfoData tablosunda {projectCount} proje var");
+            Debug.Log($"ProjectInfoData table contains {projectCount} projects");
 
             if (projectCount > 0)
             {
                 var projects = _connection.Query<ProjectInfoData>("SELECT * FROM ProjectInfoData");
                 foreach (var project in projects)
                 {
-                    Debug.Log($"  📋 Proje {project.ID}: '{project.Name}' - {project.Created_Date}");
+                    Debug.Log($"  Project {project.ID}: '{project.Name}' - {project.Created_Date}");
                 }
             }
 
-            // ProjectTasks tablosundan veri çek
             var taskCount = _connection.ExecuteScalar<int>("SELECT COUNT(*) FROM ProjectTasks");
-            Debug.Log($"📝 ProjectTasks tablosunda {taskCount} task var");
+            Debug.Log($"ProjectTasks table contains {taskCount} tasks");
 
             if (taskCount > 0)
             {
                 var tasks = _connection.Query<ProjectTasks>("SELECT * FROM ProjectTasks LIMIT 5");
                 foreach (var task in tasks)
                 {
-                    Debug.Log($"  🔸 Task {task.id}: '{task.title}' ({task.status}) - Proje: {task.projectId}");
+                    Debug.Log($"  Task {task.id}: '{task.title}' ({task.status}) - Project: {task.projectId}");
                 }
                 if (taskCount > 5)
                 {
-                    Debug.Log($"  ... ve {taskCount - 5} task daha");
+                    Debug.Log($"  ... and {taskCount - 5} more tasks");
                 }
             }
 
-            Debug.Log("🔍 === VERİTABANI İÇERİK LİSTESİ BİTTİ ===");
+            Debug.Log("=== DATABASE CONTENT LISTING COMPLETE ===");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"❌ Veri listeleme hatası: {ex.Message}");
+            Debug.LogError($"Data listing error: {ex.Message}");
         }
     }
 
@@ -123,14 +119,13 @@ public class DatabaseManager : MonoBehaviour
         return _connection;
     }
 
-    // CRUD Operations - Mevcut şema ile uyumlu
+    // CRUD Operations - Compatible with existing schema
     public T GetById<T>(int id) where T : new()
     {
         lock (_lockObject)
         {
             try
             {
-                // Direkt SQL sorgusu ile daha güvenli
                 string tableName = typeof(T).Name;
                 string idColumn = tableName == "ProjectInfoData" ? "ID" : "id";
 
@@ -139,7 +134,7 @@ public class DatabaseManager : MonoBehaviour
             }
             catch (Exception ex)
             {
-                Debug.LogError($"❌ GetById hatası: {ex.Message}");
+                Debug.LogError($"GetById error: {ex.Message}");
                 return default(T);
             }
         }
@@ -153,12 +148,12 @@ public class DatabaseManager : MonoBehaviour
             {
                 string tableName = typeof(T).Name;
                 var result = _connection.Query<T>($"SELECT * FROM {tableName}");
-                Debug.Log($"🔍 {tableName} tablosundan {result.Count} kayıt getirildi");
+                Debug.Log($"Retrieved {result.Count} records from {tableName} table");
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"❌ GetAll hatası: {ex.Message}");
+                Debug.LogError($"GetAll error: {ex.Message}");
                 return new List<T>();
             }
         }
@@ -172,12 +167,12 @@ public class DatabaseManager : MonoBehaviour
             {
                 var result = _connection.Query<ProjectTasks>(
                     "SELECT * FROM ProjectTasks WHERE projectId = ?", projectId);
-                Debug.Log($"🔍 Proje {projectId} için {result.Count} task bulundu");
+                Debug.Log($"Found {result.Count} tasks for project {projectId}");
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"❌ GetTasksByProjectId hatası: {ex.Message}");
+                Debug.LogError($"GetTasksByProjectId error: {ex.Message}");
                 return new List<ProjectTasks>();
             }
         }
@@ -190,12 +185,12 @@ public class DatabaseManager : MonoBehaviour
             try
             {
                 int result = _connection.Insert(item);
-                Debug.Log($"✅ {typeof(T).Name} eklendi: {result}");
+                Debug.Log($"{typeof(T).Name} inserted successfully: {result}");
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"❌ Insert hatası: {ex.Message}");
+                Debug.LogError($"Insert error: {ex.Message}");
                 return 0;
             }
         }
@@ -208,12 +203,12 @@ public class DatabaseManager : MonoBehaviour
             try
             {
                 int result = _connection.Update(item);
-                Debug.Log($"✅ {typeof(T).Name} güncellendi: {result}");
+                Debug.Log($"{typeof(T).Name} updated successfully: {result}");
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"❌ UpdateItem hatası: {ex.Message}");
+                Debug.LogError($"UpdateItem error: {ex.Message}");
                 return 0;
             }
         }
@@ -226,12 +221,12 @@ public class DatabaseManager : MonoBehaviour
             try
             {
                 int result = _connection.Delete(item);
-                Debug.Log($"✅ {typeof(T).Name} silindi: {result}");
+                Debug.Log($"{typeof(T).Name} deleted successfully: {result}");
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"❌ Delete hatası: {ex.Message}");
+                Debug.LogError($"Delete error: {ex.Message}");
                 return 0;
             }
         }
@@ -246,12 +241,12 @@ public class DatabaseManager : MonoBehaviour
                 _connection.BeginTransaction();
                 action?.Invoke();
                 _connection.Commit();
-                Debug.Log("✅ Transaction tamamlandı");
+                Debug.Log("Transaction completed successfully");
             }
             catch (Exception ex)
             {
                 _connection.Rollback();
-                Debug.LogError($"❌ Transaction hatası: {ex.Message}");
+                Debug.LogError($"Transaction error: {ex.Message}");
                 throw;
             }
         }

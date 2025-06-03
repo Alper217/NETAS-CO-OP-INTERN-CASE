@@ -13,14 +13,14 @@ public class TaskCardUI : MonoBehaviour
     public int projectId { get; private set; }
     public string taskStatus { get; private set; }
 
-    // Çift tık sistemi için
+    // Double-click system variables
     private float lastClickTime = 0f;
     private const float DOUBLE_CLICK_TIME = 0.3f;
     private bool waitingForDoubleClick = false;
 
     private void Start()
     {
-        // Button component'ini al
+        // Get button component
         cardButton = GetComponent<Button>();
         if (cardButton != null)
         {
@@ -35,20 +35,20 @@ public class TaskCardUI : MonoBehaviour
         projectId = projId;
         taskStatus = status;
 
-        // UI bileşenlerini bul (lazy loading)
+        // Find UI components (lazy loading)
         if (taskTitleText == null || taskDescriptionText == null)
         {
             taskTitleText = transform.Find("TaskTitle")?.GetComponent<TextMeshProUGUI>();
             taskDescriptionText = transform.Find("TaskDescription")?.GetComponent<TextMeshProUGUI>();
 
-            // Eğer TaskTitle bulunamazsa, ilk TextMeshPro'yu kullan (mevcut sisteminizle uyumlu)
+            // If TaskTitle not found, use first TextMeshPro component (compatible with existing system)
             if (taskTitleText == null)
             {
                 taskTitleText = GetComponentInChildren<TextMeshProUGUI>();
             }
         }
 
-        // Verileri ata
+        // Assign data
         if (taskTitleText != null)
             taskTitleText.text = title;
 
@@ -63,14 +63,14 @@ public class TaskCardUI : MonoBehaviour
 
         if (timeSinceLastClick <= DOUBLE_CLICK_TIME && waitingForDoubleClick)
         {
-            // ÇİFT TIK ALGILANDI
+            // DOUBLE CLICK DETECTED
             OnDoubleClick();
             waitingForDoubleClick = false;
-            StopAllCoroutines(); // Tek tık coroutine'ini durdur
+            StopAllCoroutines(); // Stop single click coroutine
         }
         else
         {
-            // TEK TIK - Biraz bekle, çift tık gelirse tek tık iptal et
+            // SINGLE CLICK - Wait a bit, cancel single click if double click comes
             waitingForDoubleClick = true;
             StartCoroutine(SingleClickCoroutine());
         }
@@ -84,7 +84,7 @@ public class TaskCardUI : MonoBehaviour
 
         if (waitingForDoubleClick)
         {
-            // Çift tık gelmedi, tek tık işlemini yap
+            // No double click came, perform single click action
             OnSingleClick();
             waitingForDoubleClick = false;
         }
@@ -92,9 +92,9 @@ public class TaskCardUI : MonoBehaviour
 
     private void OnSingleClick()
     {
-        Debug.Log($"🖱️ Task tek tık: {taskId} - {taskTitleText?.text}");
+        Debug.Log($"Task single click: {taskId} - {taskTitleText?.text}");
 
-        // Sadece task'ı seç
+        // Only select the task
         var projectManager = FindObjectOfType<ProjectManager>();
         if (projectManager != null)
         {
@@ -104,9 +104,9 @@ public class TaskCardUI : MonoBehaviour
 
     private void OnDoubleClick()
     {
-        Debug.Log($"🖱️🖱️ Task çift tık: {taskId} - {taskTitleText?.text}");
+        Debug.Log($"Task double click: {taskId} - {taskTitleText?.text}");
 
-        // Task'ı seç VE info panelini aç
+        // Select task AND open info panel
         var projectManager = FindObjectOfType<ProjectManager>();
         if (projectManager != null)
         {

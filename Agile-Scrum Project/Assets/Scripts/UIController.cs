@@ -2,8 +2,8 @@
 using UnityEngine.UI;
 
 /// <summary>
-/// Düzeltilmiş UI kontrol sınıfı - Button event sıralamalar düzeltildi
-/// ✨ Çift tık desteği eklendi - tek tık sadece seçer, çift tık info paneli açar
+/// Fixed UI control class - Button event ordering corrected
+/// Double-click support added - single click only selects, double click opens info panel
 /// </summary>
 public class UIController : MonoBehaviour
 {
@@ -35,15 +35,15 @@ public class UIController : MonoBehaviour
     public Button closeAllPanelsButton;
 
     [Header("Form Buttons (Project Panel)")]
-    public Button createProjectFormButton;  // Panel içindeki "Proje Oluştur" butonu
-    public Button updateProjectFormButton;  // Panel içindeki "Proje Güncelle" butonu
+    public Button createProjectFormButton;  // "Create Project" button inside panel
+    public Button updateProjectFormButton;  // "Update Project" button inside panel
 
     [Header("Form Buttons (Task Panel)")]
-    public Button createTaskFormButton;     // Panel içindeki "Görev Oluştur" butonu
-    public Button updateTaskFormButton;     // Panel içindeki "Görev Güncelle" butonu
+    public Button createTaskFormButton;     // "Create Task" button inside panel
+    public Button updateTaskFormButton;     // "Update Task" button inside panel
 
     [Header("Info Panel Buttons")]
-    public Button openTaskInfoButton;       // ✨ YENİ: Manuel info paneli açma butonu
+    public Button openTaskInfoButton;       // Manual info panel open button
 
     [Header("References")]
     public ProjectManager projectManager;
@@ -54,97 +54,96 @@ public class UIController : MonoBehaviour
         SetupButtonEvents();
         CloseAllPanels();
 
-        // İlk açılışta projeleri yükle
-        Debug.Log("🚀 UIController başlatıldı");
+        Debug.Log("UIController initialized");
     }
 
     private void SetupButtonEvents()
     {
-        // Ana menu butonları - sadece panel açar
+        // Main menu buttons - only open panels
         addProjectButton?.onClick.AddListener(() => {
-            Debug.Log("📝 Proje ekleme paneli açılıyor");
+            Debug.Log("Opening project creation panel");
             OpenProjectPanel(PanelMode.Add);
         });
 
         updateProjectButton?.onClick.AddListener(() => {
-            Debug.Log("✏️ Proje güncelleme paneli açılıyor");
+            Debug.Log("Opening project update panel");
             if (projectManager.SelectedProjectId != -1)
             {
                 OpenProjectPanel(PanelMode.Update);
-                projectManager.LoadSelectedProjectToInputs(); // Bu metodu ekleyeceğiz
+                projectManager.LoadSelectedProjectToInputs();
             }
             else
             {
-                Debug.LogWarning("❌ Güncellemek için önce bir proje seçin!");
+                Debug.LogWarning("Please select a project first to update!");
             }
         });
 
         deleteProjectButton?.onClick.AddListener(() => {
-            if (ConfirmDelete("Bu projeyi ve tüm görevlerini silmek istediğinize emin misiniz?"))
+            if (ConfirmDelete("Are you sure you want to delete this project and all its tasks?"))
             {
                 projectManager.DeleteSelectedProject();
             }
         });
 
-        // Panel içindeki form butonları - asıl işlemi yapar
+        // Form buttons inside panels - perform actual operations
         createProjectFormButton?.onClick.AddListener(() => {
-            Debug.Log("💾 Proje oluşturuluyor");
+            Debug.Log("Creating project");
             projectManager.CreateProject();
             CloseAllPanels();
         });
 
         updateProjectFormButton?.onClick.AddListener(() => {
-            Debug.Log("💾 Proje güncelleniyor");
+            Debug.Log("Updating project");
             projectManager.UpdateSelectedProject();
             CloseAllPanels();
         });
 
         // Task operations
         addTaskButton?.onClick.AddListener(() => {
-            Debug.Log("📝 Görev ekleme paneli açılıyor");
+            Debug.Log("Opening task creation panel");
             if (projectManager.SelectedProjectId != -1)
             {
                 OpenTaskPanel(PanelMode.Add);
             }
             else
             {
-                Debug.LogWarning("❌ Görev eklemek için önce bir proje seçin!");
+                Debug.LogWarning("Please select a project first to add a task!");
             }
         });
 
         updateTaskButton?.onClick.AddListener(() => {
-            Debug.Log("✏️ Görev güncelleme paneli açılıyor");
+            Debug.Log("Opening task update panel");
             if (projectManager.SelectedTaskId != -1)
             {
                 OpenTaskPanel(PanelMode.Update);
             }
             else
             {
-                Debug.LogWarning("❌ Güncellemek için önce bir görev seçin!");
+                Debug.LogWarning("Please select a task first to update!");
             }
         });
 
         deleteTaskButton?.onClick.AddListener(() => {
-            if (ConfirmDelete("Bu görevi silmek istediğinize emin misiniz?"))
+            if (ConfirmDelete("Are you sure you want to delete this task?"))
             {
                 projectManager.DeleteSelectedTask();
             }
         });
 
-        // Panel içindeki task form butonları
+        // Task form buttons inside panels
         createTaskFormButton?.onClick.AddListener(() => {
-            Debug.Log("💾 Görev oluşturuluyor");
+            Debug.Log("Creating task");
             projectManager.CreateTask();
             CloseAllPanels();
         });
 
         updateTaskFormButton?.onClick.AddListener(() => {
-            Debug.Log("💾 Görev güncelleniyor");
+            Debug.Log("Updating task");
             projectManager.UpdateSelectedTask();
             CloseAllPanels();
         });
 
-        // ✨ YENİ: Manuel info paneli açma butonu
+        // Manual info panel open button
         openTaskInfoButton?.onClick.AddListener(() => {
             if (projectManager.SelectedTaskId != -1)
             {
@@ -152,29 +151,29 @@ public class UIController : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("❌ Info paneli açmak için önce bir görev seçin!");
+                Debug.LogWarning("Please select a task first to open info panel!");
             }
         });
 
         // Task status changes
         todoToInProgressButton?.onClick.AddListener(() => {
             projectManager.ChangeTaskStatus("InProgress");
-            Debug.Log("✅ Task durumu: ToDo → InProgress");
+            Debug.Log("Task status: ToDo → InProgress");
         });
 
         inProgressToDoneButton?.onClick.AddListener(() => {
             projectManager.ChangeTaskStatus("Done");
-            Debug.Log("✅ Task durumu: InProgress → Done");
+            Debug.Log("Task status: InProgress → Done");
         });
 
         doneToInProgressButton?.onClick.AddListener(() => {
             projectManager.ChangeTaskStatus("InProgress");
-            Debug.Log("✅ Task durumu: Done → InProgress (geri alındı)");
+            Debug.Log("Task status: Done → InProgress (reverted)");
         });
 
         inProgressToTodoButton?.onClick.AddListener(() => {
             projectManager.ChangeTaskStatus("ToDo");
-            Debug.Log("✅ Task durumu: InProgress → ToDo (geri alındı)");
+            Debug.Log("Task status: InProgress → ToDo (reverted)");
         });
 
         // Other operations
@@ -185,7 +184,7 @@ public class UIController : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("❌ Analiz için önce bir proje seçin!");
+                Debug.LogWarning("Please select a project first to analyze!");
             }
         });
 
@@ -205,16 +204,16 @@ public class UIController : MonoBehaviour
 
     private void OnProjectSelected(int projectId)
     {
-        Debug.Log($"🎯 Proje seçildi: {projectId}");
+        Debug.Log($"Project selected: {projectId}");
         UpdateButtonStates();
     }
 
-    // ⚠️ DÜZELTİLDİ: Artık otomatik info paneli açmıyor
+    // FIXED: No longer automatically opens info panel
     private void OnTaskSelected(int taskId)
     {
-        Debug.Log($"🎯 Görev seçildi: {taskId}");
+        Debug.Log($"Task selected: {taskId}");
         UpdateButtonStates();
-        // OpenTaskInfoPanel(); // ❌ KALDIRILDI - Artık sadece çift tık ile açılacak
+        // OpenTaskInfoPanel(); // REMOVED - Now only opens with double click
     }
 
     private void UpdateButtonStates()
@@ -231,10 +230,10 @@ public class UIController : MonoBehaviour
         if (updateTaskButton != null) updateTaskButton.interactable = hasSelectedTask;
         if (deleteTaskButton != null) deleteTaskButton.interactable = hasSelectedTask;
 
-        // ✨ YENİ: Info panel butonu durumu
+        // Info panel button state
         if (openTaskInfoButton != null) openTaskInfoButton.interactable = hasSelectedTask;
 
-        // ✨ YENİ: Task status butonları - seçili task'ın durumuna göre aktif/pasif
+        // Task status buttons - active/inactive based on selected task status
         string selectedTaskStatus = GetSelectedTaskStatus();
 
         if (todoToInProgressButton != null)
@@ -254,13 +253,13 @@ public class UIController : MonoBehaviour
         if (screenshotButton != null) screenshotButton.interactable = hasSelectedProject;
     }
 
-    // ✨ YENİ METOT: Seçili task'ın durumunu döndürür
+    // Returns the status of selected task
     private string GetSelectedTaskStatus()
     {
         if (projectManager == null || projectManager.SelectedTaskId == -1)
             return "";
 
-        // DatabaseManager'dan seçili task'ı al ve durumunu döndür
+        // Get selected task from DatabaseManager and return its status
         var task = DatabaseManager.Instance.GetById<ProjectTasks>(projectManager.SelectedTaskId);
         return task?.status ?? "";
     }
@@ -280,7 +279,7 @@ public class UIController : MonoBehaviour
             projectEditPanel.SetActive(true);
         }
 
-        // Form butonlarının görünürlüğünü ayarla
+        // Set form button visibility
         if (createProjectFormButton != null) createProjectFormButton.gameObject.SetActive(mode == PanelMode.Add);
         if (updateProjectFormButton != null) updateProjectFormButton.gameObject.SetActive(mode == PanelMode.Update);
     }
@@ -294,7 +293,7 @@ public class UIController : MonoBehaviour
             taskEditPanel.SetActive(true);
         }
 
-        // Form butonlarının görünürlüğünü ayarla
+        // Set form button visibility
         if (createTaskFormButton != null) createTaskFormButton.gameObject.SetActive(mode == PanelMode.Add);
         if (updateTaskFormButton != null) updateTaskFormButton.gameObject.SetActive(mode == PanelMode.Update);
     }
@@ -304,7 +303,7 @@ public class UIController : MonoBehaviour
         if (taskInfoPanel != null)
         {
             taskInfoPanel.SetActive(true);
-            Debug.Log("📋 Task info paneli açıldı");
+            Debug.Log("Task info panel opened");
         }
     }
 
@@ -323,20 +322,20 @@ public class UIController : MonoBehaviour
         if (taskInfoPanel != null) taskInfoPanel.SetActive(false);
         if (analysisPanel != null) analysisPanel.SetActive(false);
 
-        Debug.Log("🔒 Tüm paneller kapatıldı");
+        Debug.Log("All panels closed");
     }
 
     private bool ConfirmDelete(string message)
     {
 #if UNITY_EDITOR
-        return UnityEditor.EditorUtility.DisplayDialog("Silme Onayı", message, "Evet", "Hayır");
+        return UnityEditor.EditorUtility.DisplayDialog("Delete Confirmation", message, "Yes", "No");
 #else
-        Debug.LogWarning("Silme işlemi: " + message);
-        return true; // Runtime'da always true, UI confirmation ekleyebilirsiniz
+        Debug.LogWarning("Delete operation: " + message);
+        return true; // Always true in runtime, you can add UI confirmation
 #endif
     }
 
-    // External method calls - Bu metotlar UI butonlarından direk çağrılabilir
+    // External method calls - These methods can be called directly from UI buttons
     public void OnAddProjectButtonClick() => OpenProjectPanel(PanelMode.Add);
     public void OnUpdateProjectButtonClick() => OpenProjectPanel(PanelMode.Update);
     public void OnAddTaskButtonClick() => OpenTaskPanel(PanelMode.Add);
@@ -344,7 +343,7 @@ public class UIController : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Event subscription'ları temizle
+        // Clean up event subscriptions
         if (projectManager != null)
         {
             projectManager.OnProjectSelected -= OnProjectSelected;

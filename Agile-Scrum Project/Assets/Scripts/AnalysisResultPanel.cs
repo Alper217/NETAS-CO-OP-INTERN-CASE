@@ -2,10 +2,6 @@
 using TMPro;
 using UnityEngine.UI;
 
-/// <summary>
-/// Optimize edilmiş analiz sonuç paneli
-/// Performans iyileştirmeleri ve temiz kod yapısı
-/// </summary>
 public class AnalysisResultPanel : MonoBehaviour
 {
     [Header("UI References")]
@@ -52,7 +48,7 @@ public class AnalysisResultPanel : MonoBehaviour
     {
         if (string.IsNullOrEmpty(analysisResult))
         {
-            Debug.LogWarning("⚠️ Boş analiz sonucu!");
+            Debug.LogWarning("Empty analysis result received.");
             return;
         }
 
@@ -65,7 +61,7 @@ public class AnalysisResultPanel : MonoBehaviour
         }
 
         ScrollToTop();
-        Debug.Log("📊 Analiz sonucu gösterildi");
+        Debug.Log("Analysis result displayed successfully.");
     }
 
     public void ShowLoading()
@@ -78,7 +74,7 @@ public class AnalysisResultPanel : MonoBehaviour
             resultText.text = "";
         }
 
-        Debug.Log("⏳ Loading gösteriliyor");
+        Debug.Log("Loading state activated.");
     }
 
     public void ShowError(string errorMessage)
@@ -88,11 +84,11 @@ public class AnalysisResultPanel : MonoBehaviour
 
         if (resultText != null)
         {
-            resultText.text = $"❌ **Hata**\n\n{errorMessage}";
+            resultText.text = $"**Error**\n\n{errorMessage}";
         }
 
         ScrollToTop();
-        Debug.LogWarning($"❌ Hata gösterildi: {errorMessage}");
+        Debug.LogWarning($"Error displayed: {errorMessage}");
     }
 
     public void ClosePanel()
@@ -103,7 +99,7 @@ public class AnalysisResultPanel : MonoBehaviour
         }
 
         HideLoading();
-        Debug.Log("❌ Analiz paneli kapatıldı");
+        Debug.Log("Analysis panel closed.");
     }
 
     public void OpenPanel()
@@ -128,7 +124,7 @@ public class AnalysisResultPanel : MonoBehaviour
 
         if (loadingText != null)
         {
-            loadingText.text = "🤖 Projeniz analiz ediliyor...\nLütfen bekleyin...";
+            loadingText.text = "Analyzing your project...\nPlease wait...";
         }
     }
 
@@ -165,7 +161,7 @@ public class AnalysisResultPanel : MonoBehaviour
         if (scrollRect != null)
         {
             scrollRect.normalizedPosition = new Vector2(0, 1);
-            Debug.Log("📜 Scroll en üste getirildi");
+            Debug.Log("Scroll position reset to top.");
         }
     }
     // Keyboard shortcut support

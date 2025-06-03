@@ -2,8 +2,8 @@ using SQLite4Unity3d;
 using System;
 
 /// <summary>
-/// Mevcut veritabaný þemasýyla uyumlu ProjectInfoData modeli
-/// Kýsýtlama yok - mevcut þema korunuyor
+/// ProjectInfoData model compatible with existing database schema
+/// No restrictions - retains existing scheme
 /// </summary>
 public class ProjectInfoData
 {

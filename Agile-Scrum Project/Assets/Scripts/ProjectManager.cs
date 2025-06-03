@@ -6,10 +6,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Tüm proje işlemlerini yöneten optimize edilmiş sınıf
-/// Proje CRUD, Task yönetimi ve UI güncellemelerini içerir
-/// LoadSelectedProjectToInputs metodu eklendi
-/// ✨ Çift tık desteği eklendi - tek tık sadece seçer, çift tık info paneli açar
+/// Optimized class that manages all project operations
+/// Includes project CRUD, task management and UI updates
+/// Double-click support added - single click only selects, double click opens info panel
 /// </summary>
 public class ProjectManager : MonoBehaviour
 {
@@ -60,7 +59,7 @@ public class ProjectManager : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(projectNameInput.text))
         {
-            Debug.LogWarning("❌ Proje adı boş olamaz!");
+            Debug.LogWarning("Project name cannot be empty!");
             return;
         }
 
@@ -74,14 +73,14 @@ public class ProjectManager : MonoBehaviour
         try
         {
             DatabaseManager.Instance.Insert(newProject);
-            Debug.Log($"✅ Yeni proje oluşturuldu: {newProject.Name}");
+            Debug.Log($"New project created: {newProject.Name}");
 
             ClearProjectInputs();
             LoadAllProjects();
         }
         catch (Exception ex)
         {
-            Debug.LogError($"❌ Proje oluşturma hatası: {ex.Message}");
+            Debug.LogError($"Project creation error: {ex.Message}");
         }
     }
 
@@ -89,7 +88,7 @@ public class ProjectManager : MonoBehaviour
     {
         if (_selectedProjectId == -1)
         {
-            Debug.LogWarning("❌ Güncellemek için bir proje seçin!");
+            Debug.LogWarning("Please select a project to update!");
             return;
         }
 
@@ -98,10 +97,10 @@ public class ProjectManager : MonoBehaviour
         {
             project.Name = projectNameInput.text.Trim();
             project.Description = projectDescriptionInput.text?.Trim() ?? "";
-            project.MarkAsModified(); // Değişiklik tarihini güncelle
+            project.MarkAsModified();
 
             DatabaseManager.Instance.UpdateItem(project);
-            Debug.Log($"✅ Proje güncellendi: {project.Name}");
+            Debug.Log($"Project updated: {project.Name}");
 
             ClearProjectInputs();
             LoadAllProjects();
@@ -112,7 +111,7 @@ public class ProjectManager : MonoBehaviour
     {
         if (_selectedProjectId == -1)
         {
-            Debug.LogWarning("❌ Silmek için bir proje seçin!");
+            Debug.LogWarning("Please select a project to delete!");
             return;
         }
 
@@ -120,14 +119,14 @@ public class ProjectManager : MonoBehaviour
         {
             DatabaseManager.Instance.ExecuteTransaction(() =>
             {
-                // Önce projenin tüm taskları sil
+                // First delete all project tasks
                 var tasks = DatabaseManager.Instance.GetTasksByProjectId(_selectedProjectId);
                 foreach (var task in tasks)
                 {
                     DatabaseManager.Instance.Delete(task);
                 }
 
-                // Sonra projeyi sil
+                // Then delete the project
                 var project = DatabaseManager.Instance.GetById<ProjectInfoData>(_selectedProjectId);
                 if (project != null)
                 {
@@ -135,7 +134,7 @@ public class ProjectManager : MonoBehaviour
                 }
             });
 
-            Debug.Log("✅ Proje ve tüm taskları silindi");
+            Debug.Log("Project and all tasks deleted successfully");
             _selectedProjectId = -1;
             ClearProjectInputs();
             LoadAllProjects();
@@ -143,16 +142,15 @@ public class ProjectManager : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Debug.LogError($"❌ Proje silme hatası: {ex.Message}");
+            Debug.LogError($"Project deletion error: {ex.Message}");
         }
     }
 
-    // ✨ YENİ METOT: Seçili projeyi inputlara yükler
     public void LoadSelectedProjectToInputs()
     {
         if (_selectedProjectId == -1)
         {
-            Debug.LogWarning("❌ Yüklemek için bir proje seçin!");
+            Debug.LogWarning("Please select a project to load!");
             return;
         }
 
@@ -161,11 +159,11 @@ public class ProjectManager : MonoBehaviour
         {
             projectNameInput.text = project.Name;
             projectDescriptionInput.text = project.Description;
-            Debug.Log($"📝 Proje bilgileri inputlara yüklendi: {project.Name}");
+            Debug.Log($"Project information loaded to inputs: {project.Name}");
         }
         else
         {
-            Debug.LogWarning($"❌ Proje bulunamadı: {_selectedProjectId}");
+            Debug.LogWarning($"Project not found: {_selectedProjectId}");
         }
     }
 
@@ -174,7 +172,7 @@ public class ProjectManager : MonoBehaviour
         ClearProjectCards();
 
         var projects = DatabaseManager.Instance.GetAll<ProjectInfoData>();
-        Debug.Log($"📂 {projects.Count} proje yükleniyor...");
+        Debug.Log($"Loading {projects.Count} projects...");
 
         for (int i = 0; i < projects.Count; i++)
         {
@@ -182,20 +180,20 @@ public class ProjectManager : MonoBehaviour
         }
 
         UpdateProjectScrollArea(projects.Count);
-        Debug.Log($"✅ {projects.Count} proje kartı oluşturuldu");
+        Debug.Log($"{projects.Count} project cards created successfully");
     }
 
     private void CreateProjectCard(ProjectInfoData project, int index)
     {
         if (projectCardPrefab == null)
         {
-            Debug.LogError("❌ Project Card Prefab atanmamış!");
+            Debug.LogError("Project Card Prefab not assigned!");
             return;
         }
 
         if (projectContentParent == null)
         {
-            Debug.LogError("❌ Project Content Parent atanmamış!");
+            Debug.LogError("Project Content Parent not assigned!");
             return;
         }
 
@@ -210,11 +208,11 @@ public class ProjectManager : MonoBehaviour
         if (cardUI != null)
         {
             cardUI.SetData(project.ID, project.Name, project.Created_Date, project.Description);
-            Debug.Log($"📋 Proje kartı oluşturuldu: {project.Name} (ID: {project.ID})");
+            Debug.Log($"Project card created: {project.Name} (ID: {project.ID})");
         }
         else
         {
-            Debug.LogError("❌ ProjectCardUI component bulunamadı!");
+            Debug.LogError("ProjectCardUI component not found!");
         }
 
         // Click event
@@ -225,7 +223,7 @@ public class ProjectManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("⚠️ Project Card'da Button component bulunamadı!");
+            Debug.LogWarning("Button component not found on Project Card!");
         }
 
         _projectCards[project.ID] = card;
@@ -237,7 +235,7 @@ public class ProjectManager : MonoBehaviour
         {
             float totalWidth = projectCount * (itemWidth + itemSpacing);
             projectContentParent.sizeDelta = new Vector2(totalWidth, projectContentParent.sizeDelta.y);
-            Debug.Log($"📏 Scroll area genişliği güncellendi: {totalWidth}");
+            Debug.Log($"Scroll area width updated: {totalWidth}");
         }
     }
 
@@ -259,9 +257,9 @@ public class ProjectManager : MonoBehaviour
     private void SelectProject(int projectId)
     {
         _selectedProjectId = projectId;
-        _selectedTaskId = -1; // Task seçimini temizle
+        _selectedTaskId = -1; // Clear task selection
 
-        Debug.Log($"🎯 Proje seçildi: {projectId}");
+        Debug.Log($"Project selected: {projectId}");
 
         LoadProjectTasks();
         OnProjectSelected?.Invoke(projectId);
@@ -275,13 +273,13 @@ public class ProjectManager : MonoBehaviour
     {
         if (_selectedProjectId == -1)
         {
-            Debug.LogWarning("❌ Task eklemek için önce bir proje seçin!");
+            Debug.LogWarning("Please select a project first to add a task!");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(taskTitleInput.text))
         {
-            Debug.LogWarning("❌ Task başlığı boş olamaz!");
+            Debug.LogWarning("Task title cannot be empty!");
             return;
         }
 
@@ -297,14 +295,14 @@ public class ProjectManager : MonoBehaviour
         try
         {
             DatabaseManager.Instance.Insert(newTask);
-            Debug.Log($"✅ Yeni task oluşturuldu: {newTask.title}");
+            Debug.Log($"New task created: {newTask.title}");
 
             ClearTaskInputs();
             LoadProjectTasks();
         }
         catch (Exception ex)
         {
-            Debug.LogError($"❌ Task oluşturma hatası: {ex.Message}");
+            Debug.LogError($"Task creation error: {ex.Message}");
         }
     }
 
@@ -312,7 +310,7 @@ public class ProjectManager : MonoBehaviour
     {
         if (_selectedTaskId == -1)
         {
-            Debug.LogWarning("❌ Güncellemek için bir task seçin!");
+            Debug.LogWarning("Please select a task to update!");
             return;
         }
 
@@ -321,10 +319,10 @@ public class ProjectManager : MonoBehaviour
         {
             task.title = taskTitleInput.text.Trim();
             task.description = taskDescriptionInput.text?.Trim() ?? "";
-            task.MarkAsModified(); // Değişiklik tarihini güncelle
+            task.MarkAsModified();
 
             DatabaseManager.Instance.UpdateItem(task);
-            Debug.Log($"✅ Task güncellendi: {task.title}");
+            Debug.Log($"Task updated: {task.title}");
 
             ClearTaskInputs();
             LoadProjectTasks();
@@ -336,7 +334,7 @@ public class ProjectManager : MonoBehaviour
     {
         if (_selectedTaskId == -1)
         {
-            Debug.LogWarning("❌ Silmek için bir task seçin!");
+            Debug.LogWarning("Please select a task to delete!");
             return;
         }
 
@@ -344,7 +342,7 @@ public class ProjectManager : MonoBehaviour
         if (task != null)
         {
             DatabaseManager.Instance.Delete(task);
-            Debug.Log($"✅ Task silindi: {task.title}");
+            Debug.Log($"Task deleted: {task.title}");
 
             ClearTaskInputs();
             LoadProjectTasks();
@@ -352,12 +350,11 @@ public class ProjectManager : MonoBehaviour
         }
     }
 
-    // Status değiştirme metodu - tek metod yeterli
     public void ChangeTaskStatus(string newStatus)
     {
         if (_selectedTaskId == -1)
         {
-            Debug.LogWarning("❌ Durum değiştirmek için bir task seçin!");
+            Debug.LogWarning("Please select a task to change status!");
             return;
         }
 
@@ -366,35 +363,34 @@ public class ProjectManager : MonoBehaviour
         {
             string oldStatus = task.status;
             task.status = newStatus;
-            task.MarkAsModified(); // Değişiklik tarihini güncelle
+            task.MarkAsModified();
 
             DatabaseManager.Instance.UpdateItem(task);
 
-            Debug.Log($"✅ Task durumu güncellendi: {oldStatus} → {newStatus}");
+            Debug.Log($"Task status updated: {oldStatus} → {newStatus}");
             LoadProjectTasks();
+
+            SelectTaskOnly(_selectedTaskId);
         }
     }
 
-    #region Task Selection Methods - ✨ Çift Tık Desteği
-
-    // ✨ YENİ METOT: Sadece task seçer, panel açmaz (tek tık için)
+    #region Task Selection Methods - Double Click Support
     public void SelectTaskOnly(int taskId)
     {
         _selectedTaskId = taskId;
-        Debug.Log($"🎯 Task seçildi (sadece): {taskId}");
+        Debug.Log($"Task selected (only): {taskId}");
 
         LoadTaskToInputs(taskId);
-        LoadTaskInfoPanel(taskId); // Info panel verilerini yükle ama paneli açma
+        LoadTaskInfoPanel(taskId); // Load info panel data but don't open panel
         OnTaskSelected?.Invoke(taskId);
 
-        // Panel açma yok - sadece seçim
+        // No panel opening - only selection
     }
 
-    // ✨ YENİ METOT: Task seçer VE info panelini açar (çift tık için)
     public void SelectTaskAndOpenInfo(int taskId)
     {
         _selectedTaskId = taskId;
-        Debug.Log($"🎯 Task seçildi + Info paneli açıldı: {taskId}");
+        Debug.Log($"Task selected + Info panel opened: {taskId}");
 
         LoadTaskToInputs(taskId);
         LoadTaskInfoPanel(taskId);
@@ -402,30 +398,27 @@ public class ProjectManager : MonoBehaviour
         OnTaskSelected?.Invoke(taskId);
     }
 
-    // ⚠️ DEĞİŞTİRİLDİ: Eski SelectTask metodu - artık otomatik panel açmıyor
     private void SelectTask(int taskId)
     {
         _selectedTaskId = taskId;
-        Debug.Log($"🎯 Task seçildi: {taskId}");
+        Debug.Log($"Task selected: {taskId}");
 
         LoadTaskToInputs(taskId);
         LoadTaskInfoPanel(taskId);
-        // OpenTaskInfoPanel(); // ❌ KALDIRILDI - Artık otomatik panel açılmayacak
         OnTaskSelected?.Invoke(taskId);
     }
 
-    // ✨ YENİ METOT: Manuel olarak info paneli açmak için (UI butonundan çağrılabilir)
     public void OpenSelectedTaskInfo()
     {
         if (_selectedTaskId != -1)
         {
             LoadTaskInfoPanel(_selectedTaskId);
             OpenTaskInfoPanel();
-            Debug.Log($"📋 Task info paneli manuel açıldı: {_selectedTaskId}");
+            Debug.Log($"Task info panel manually opened: {_selectedTaskId}");
         }
         else
         {
-            Debug.LogWarning("❌ Info paneli açmak için önce bir task seçin!");
+            Debug.LogWarning("Please select a task first to open info panel!");
         }
     }
 
@@ -438,7 +431,7 @@ public class ProjectManager : MonoBehaviour
         ClearTasks();
 
         var tasks = DatabaseManager.Instance.GetTasksByProjectId(_selectedProjectId);
-        Debug.Log($"📋 {tasks.Count} task yükleniyor...");
+        Debug.Log($"Loading {tasks.Count} tasks...");
 
         foreach (var task in tasks)
         {
@@ -450,7 +443,7 @@ public class ProjectManager : MonoBehaviour
     {
         if (taskCardPrefab == null)
         {
-            Debug.LogError("❌ Task Card Prefab atanmamış!");
+            Debug.LogError("Task Card Prefab not assigned!");
             return;
         }
 
@@ -460,17 +453,17 @@ public class ProjectManager : MonoBehaviour
         if (cardUI != null)
         {
             cardUI.SetData(task.id, task.projectId, task.title, task.description, task.status);
-            Debug.Log($"📋 Task kartı oluşturuldu: {task.title} ({task.status})");
+            Debug.Log($"Task card created: {task.title} ({task.status})");
         }
         else
         {
-            Debug.LogError("❌ TaskCardUI component bulunamadı!");
+            Debug.LogError("TaskCardUI component not found!");
         }
 
-        // ⚠️ DİKKAT: Button event artık TaskCardUI içinde çift tık sistemi ile yönetiliyor
-        // Burada manuel onClick eklemeyin, TaskCardUI kendi kendine hallediyor
+        // NOTE: Button events are now managed by TaskCardUI with double-click system
+        // Don't add manual onClick here, TaskCardUI handles it
 
-        // Parent'a ekle
+        // Add to parent
         Transform parent = GetTaskParent(task.status);
         if (parent != null)
         {
@@ -478,7 +471,7 @@ public class ProjectManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError($"❌ Task parent bulunamadı: {task.status}");
+            Debug.LogError($"Task parent not found: {task.status}");
         }
 
         _taskCards[task.id] = taskCard;
@@ -503,7 +496,7 @@ public class ProjectManager : MonoBehaviour
         }
         _taskCards.Clear();
 
-        // Parent'ları temizle
+        // Clear parents
         ClearParent(todoParent);
         ClearParent(inProgressParent);
         ClearParent(doneParent);
@@ -547,10 +540,9 @@ public class ProjectManager : MonoBehaviour
         }
     }
 
-    // ✨ YENİ METOT: Info panelini açar (UIController'dan çağrılacak)
     public void OpenTaskInfoPanel()
     {
-        // UIController'daki OpenTaskInfoPanel metodunu çağır
+        // Call OpenTaskInfoPanel method from UIController
         var uiController = FindObjectOfType<UIController>();
         if (uiController != null)
         {
@@ -579,7 +571,7 @@ public class ProjectManager : MonoBehaviour
     {
         if (_selectedProjectId == -1)
         {
-            Debug.LogWarning("❌ Ekran görüntüsü için bir proje seçin!");
+            Debug.LogWarning("Please select a project to take screenshot!");
             return;
         }
 
@@ -606,7 +598,7 @@ public class ProjectManager : MonoBehaviour
         string fullPath = System.IO.Path.Combine(path, fileName);
         ScreenCapture.CaptureScreenshot(fullPath);
 
-        Debug.Log($"📸 Ekran görüntüsü kaydedildi: {fullPath}");
+        Debug.Log($"Screenshot saved: {fullPath}");
     }
 
     #endregion
