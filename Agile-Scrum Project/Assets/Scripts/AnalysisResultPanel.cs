@@ -22,13 +22,11 @@ public class AnalysisResultPanel : MonoBehaviour
 
     private void InitializePanel()
     {
-        // Panel başlangıçta kapalı
         if (analysisPanel != null)
         {
             analysisPanel.SetActive(false);
         }
 
-        // Loading elementi gizle
         if (loadingSpinner != null)
         {
             loadingSpinner.SetActive(false);
@@ -145,10 +143,8 @@ public class AnalysisResultPanel : MonoBehaviour
     {
         if (scrollRect != null)
         {
-            // Hemen scroll'u en üste getir
             scrollRect.normalizedPosition = new Vector2(0, 1);
 
-            // Bir frame sonra da tekrar kontrol et
             StartCoroutine(ScrollToTopCoroutine());
         }
     }
@@ -164,7 +160,6 @@ public class AnalysisResultPanel : MonoBehaviour
             Debug.Log("Scroll position reset to top.");
         }
     }
-    // Keyboard shortcut support
     private void Update()
     {
         if (IsPanelOpen() && Input.GetKeyDown(KeyCode.Escape))
@@ -172,15 +167,12 @@ public class AnalysisResultPanel : MonoBehaviour
             ClosePanel();
         }
     }
-
-    // Animation support (opsiyonel)
     public void ShowPanelWithAnimation()
     {
         if (analysisPanel != null)
         {
             analysisPanel.SetActive(true);
 
-            // Basit fade-in animasyonu
             var canvasGroup = analysisPanel.GetComponent<CanvasGroup>();
             if (canvasGroup != null)
             {
@@ -188,7 +180,6 @@ public class AnalysisResultPanel : MonoBehaviour
             }
         }
     }
-
     private System.Collections.IEnumerator FadeInCoroutine(CanvasGroup canvasGroup)
     {
         canvasGroup.alpha = 0f;

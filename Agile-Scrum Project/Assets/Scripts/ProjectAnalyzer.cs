@@ -77,7 +77,7 @@ public class ProjectAnalyzer : MonoBehaviour
 
     private void ValidateApiKey()
     {
-        if (string.IsNullOrEmpty(claudeApiKey) || claudeApiKey == "YOUR_CLAUDE_API_KEY_HERE")
+        if (string.IsNullOrEmpty(claudeApiKey) || claudeApiKey == "API_KEY_HERE")
         {
             Debug.LogWarning("Claude API key not configured! Only simple analysis will work.");
         }
