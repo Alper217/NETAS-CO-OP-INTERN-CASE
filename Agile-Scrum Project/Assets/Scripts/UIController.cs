@@ -53,10 +53,37 @@ public class UIController : MonoBehaviour
     {
         SetupButtonEvents();
         CloseAllPanels();
+        InitializeButtonStates();
 
         Debug.Log("UIController initialized");
     }
+    private void InitializeButtonStates()
+    {
+        // Project buttons - deaktif
+        if (updateProjectButton != null) updateProjectButton.interactable = false;
+        if (deleteProjectButton != null) deleteProjectButton.interactable = false;
 
+        // Task buttons - deaktif  
+        if (addTaskButton != null) addTaskButton.interactable = false;
+        if (updateTaskButton != null) updateTaskButton.interactable = false;
+        if (deleteTaskButton != null) deleteTaskButton.interactable = false;
+
+        // Task status buttons (orange arrows) - deaktif
+        if (todoToInProgressButton != null) todoToInProgressButton.interactable = false;
+        if (inProgressToDoneButton != null) inProgressToDoneButton.interactable = false;
+        if (doneToInProgressButton != null) doneToInProgressButton.interactable = false;
+        if (inProgressToTodoButton != null) inProgressToTodoButton.interactable = false;
+
+        // Right side buttons - deaktif
+        if (analyzeProjectButton != null) analyzeProjectButton.interactable = false;
+        if (screenshotButton != null) screenshotButton.interactable = false;
+        if (openTaskInfoButton != null) openTaskInfoButton.interactable = false;
+
+        // Sadece ADD PROJECT aktif kalır
+        if (addProjectButton != null) addProjectButton.interactable = true;
+
+        Debug.Log("All buttons initialized as disabled except Add Project");
+    }
     private void SetupButtonEvents()
     {
         // Main menu buttons - only open panels
